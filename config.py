@@ -50,6 +50,20 @@ ECHO_PIN = 25       # BCM 25 → HC-SR04 ECHO (after voltage divider)
 IR_FRONT_PIN = 12   # BCM 12 → Front downward IR sensor OUT
 IR_BACK_PIN  = 16   # BCM 16 → Back  downward IR sensor OUT
 
+# ── Rocker Switch ─────────────────────────────────────────────────────────────
+# 2-pin black rocker switch. One pin → BCM21, other pin → GND.
+# When switch is ON  → GPIO reads LOW  (circuit closed to GND, internal pull-up)
+# When switch is OFF → GPIO reads HIGH (circuit open, pull-up holds HIGH)
+# This means: LOW = robot armed, HIGH = robot stopped.
+SWITCH_PIN = 21     # BCM 21 → Rocker switch (Physical Pin 40)
+
+# ── Status LED ────────────────────────────────────────────────────────────────
+# Green LED + 330 Ω resistor in series between BCM20 and GND.
+# LED ON  = robot is armed and running
+# LED OFF = robot is stopped (switch off) or in start delay
+# LED BLINK (0.5 s) = start delay counting down
+LED_PIN = 20        # BCM 20 → LED anode via 330 Ω resistor (Physical Pin 38)
+
 # ── PWM ──────────────────────────────────────────────────────────────────────
 PWM_FREQ = 1000     # Hz — 1 kHz suits L298N and GA25-370 well
 
