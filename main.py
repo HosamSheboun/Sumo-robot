@@ -1,9 +1,8 @@
 """
 main.py — Entry point for the autonomous sumo robot.
 
-Instantiates all hardware abstractions, starts the FSM, and runs the
-control loop at LOOP_HZ until interrupted (Ctrl-C or SIGTERM).
-GPIO cleanup is guaranteed via try/finally.
+Wires all modules together and runs the FSM at a fixed LOOP_HZ rate.
+Handles SIGTERM (systemd stop) and KeyboardInterrupt with clean GPIO release.
 """
 
 import time
@@ -22,44 +21,38 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-_TICK_PERIOD = 1.0 / config.LOOP_HZ   # seconds per FSM tick
+_TICK = 1.0 / config.LOOP_HZ
 
 
 def main():
-    log.info("Initialising hardware…")
+    log.info("Booting sumo robot — initialising hardware.")
     motors     = MotorController()
     ultrasonic = UltrasonicSensor()
     ir         = IRSensors()
     fsm        = SumoFSM(motors, ultrasonic, ir)
 
-    # Allow SIGTERM (e.g. systemd stop) to trigger the same clean exit path
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
 
-    log.info("Starting FSM — mandatory %s-second start delay.", config.START_DELAY)
+    log.info("FSM started — %s-second start delay in progress.", config.START_DELAY)
     try:
         while True:
             t0 = time.monotonic()
             fsm.tick()
-            # Sleep for the remainder of the tick period to maintain LOOP_HZ
-            elapsed = time.monotonic() - t0
-            sleep_time = _TICK_PERIOD - elapsed
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-
-    except KeyboardInterrupt:
-        log.info("KeyboardInterrupt received — shutting down.")
+            remaining = _TICK - (time.monotonic() - t0)
+            if remaining > 0:
+                time.sleep(remaining)
+    except (KeyboardInterrupt, SystemExit):
+        log.info("Shutdown signal received.")
     except Exception as exc:
-        log.exception("Unhandled exception in main loop: %s", exc)
+        log.exception("Unhandled exception: %s", exc)
     finally:
         motors.cleanup()
-        # RPi.GPIO cleanup is handled inside MotorController.cleanup();
-        # call the global cleanup here to release sensor pins as well.
         try:
             import RPi.GPIO as gpio
             gpio.cleanup()
         except Exception:
             pass
-        log.info("GPIO released. Robot stopped.")
+        log.info("GPIO released. Robot stopped safely.")
 
 
 if __name__ == "__main__":

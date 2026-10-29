@@ -1,76 +1,90 @@
 """
-config.py — Centralized hardware configuration for the Pi Zero 2 W Sumo Robot.
+config.py — Single source of truth for all hardware constants.
 
-All BCM GPIO pin numbers, PWM settings, speed constants, and timing thresholds
-are defined here. Edit ONLY this file when adapting to different wiring layouts.
+Robot class : Heavyweight sumo (≤ 3 kg, ≤ 20 × 20 cm)
+Controller  : Raspberry Pi Zero 2 W  (BCM pin numbering throughout)
+Motor driver: L298N dual H-bridge
+Motors      : 2× GA25-370 12 V 130 RPM DC gear motor with quadrature encoder
+Sensors     : HC-SR04 ultrasonic (front), 2× downward IR line sensors (front/back)
+Power       : 3S 18650 (11.1 V) → L298N/motors direct
+              Single cell tap (3.7 V) → MT3608 boost → 5.0 V → Pi + sensors + encoders
 
-BCM pin numbering is used throughout (pass gpio.setmode(gpio.BCM) in every module).
+GA25-370 encoder wire colours
+  Red       → Motor terminal +  (to L298N OUTx)
+  Black     → Motor terminal −  (to L298N OUTx)
+  Green     → Encoder VCC  5 V  (from MT3608 5 V rail)
+  Dark Blue → Encoder GND       (common GND rail)
+  Yellow    → Encoder Channel A (GPIO input)
+  White     → Encoder Channel B (GPIO input)
 """
 
-# ─────────────────────────────────────────────
-# L298N Motor Driver — Left Motor (Motor A)
-# ─────────────────────────────────────────────
-# IN1 / IN2 control direction; ENA is the PWM speed pin.
-LEFT_IN1  = 17   # BCM 17 → L298N IN1
-LEFT_IN2  = 27   # BCM 27 → L298N IN2
-LEFT_ENA  = 18   # BCM 18 → L298N ENA  (hardware PWM capable on Pi Zero 2 W)
+# ── L298N — Left motor (Motor A) ─────────────────────────────────────────────
+LEFT_IN1 = 17       # BCM 17 → L298N IN1  direction bit A
+LEFT_IN2 = 27       # BCM 27 → L298N IN2  direction bit B
+LEFT_ENA = 18       # BCM 18 → L298N ENA  PWM speed  (HW-PWM channel 0)
 
-# ─────────────────────────────────────────────
-# L298N Motor Driver — Right Motor (Motor B)
-# ─────────────────────────────────────────────
-RIGHT_IN3 = 22   # BCM 22 → L298N IN3
-RIGHT_IN4 = 23   # BCM 23 → L298N IN4
-RIGHT_ENB = 13   # BCM 13 → L298N ENB  (hardware PWM capable on Pi Zero 2 W)
+# ── L298N — Right motor (Motor B) ────────────────────────────────────────────
+RIGHT_IN3 = 22      # BCM 22 → L298N IN3  direction bit A
+RIGHT_IN4 = 23      # BCM 23 → L298N IN4  direction bit B
+RIGHT_ENB = 13      # BCM 13 → L298N ENB  PWM speed  (HW-PWM channel 1)
 
-# ─────────────────────────────────────────────
-# GA25-370 Encoder Inputs (optional feedback)
-# Each motor has two Hall-effect encoder channels (A & B).
-# Only channel A is used here for basic speed sensing.
-# ─────────────────────────────────────────────
-LEFT_ENC_A  = 5   # BCM 5  → Left motor encoder channel A
-RIGHT_ENC_A = 6   # BCM 6  → Right motor encoder channel A
+# ── GA25-370 Quadrature Encoders ─────────────────────────────────────────────
+# Both channels (A + B) are read for full quadrature direction + speed sensing.
+LEFT_ENC_A  = 5     # BCM  5 → Left  motor yellow wire  (Channel A)
+LEFT_ENC_B  = 6     # BCM  6 → Left  motor white  wire  (Channel B)
+RIGHT_ENC_A = 19    # BCM 19 → Right motor yellow wire  (Channel A)
+RIGHT_ENC_B = 26    # BCM 26 → Right motor white  wire  (Channel B)
 
-# ─────────────────────────────────────────────
-# HC-SR04 Ultrasonic Sensor
-# TRIG: 3.3 V tolerant — connect directly.
-# ECHO: outputs 5 V — use a 1kΩ/2kΩ resistor voltage divider to bring to ~3.3 V.
-# ─────────────────────────────────────────────
-TRIG_PIN = 24    # BCM 24 → HC-SR04 TRIG
-ECHO_PIN = 25    # BCM 25 → HC-SR04 ECHO (after voltage divider)
+# Encoder pulses per full wheel revolution (GA25-370 = 6 PPR × gear ratio 34 ≈ 204)
+ENCODER_PPR = 204
 
-# ─────────────────────────────────────────────
-# IR Obstacle Sensor (front-facing, digital OUT)
-# Active-LOW: GPIO reads LOW when obstacle detected.
-# ─────────────────────────────────────────────
-IR_FRONT_PIN = 12  # BCM 12 → IR sensor digital OUT
+# ── HC-SR04 Ultrasonic Sensor ─────────────────────────────────────────────────
+# TRIG: 3.3 V output from Pi — connect directly.
+# ECHO: 5 V output from sensor — use 1 kΩ + 2 kΩ resistor divider → ~3.33 V.
+TRIG_PIN = 24       # BCM 24 → HC-SR04 TRIG
+ECHO_PIN = 25       # BCM 25 → HC-SR04 ECHO (after voltage divider)
 
-# ─────────────────────────────────────────────
-# Downward-Facing IR Line / Edge Sensors
-# Active-LOW: GPIO reads LOW when white boundary line detected.
-# Mount one sensor at the front-left and one at the front-right of the chassis.
-# ─────────────────────────────────────────────
-EDGE_LEFT_PIN  = 19  # BCM 19 → Left edge IR sensor
-EDGE_RIGHT_PIN = 26  # BCM 26 → Right edge IR sensor
+# ── Downward IR Line / Edge Sensors ──────────────────────────────────────────
+# Both sensors face the floor.  Active-LOW: GPIO reads LOW over white boundary.
+# Front sensor detects the white line ahead; back sensor detects it behind.
+IR_FRONT_PIN = 12   # BCM 12 → Front downward IR sensor OUT
+IR_BACK_PIN  = 16   # BCM 16 → Back  downward IR sensor OUT
 
-# ─────────────────────────────────────────────
-# PWM Configuration
-# ─────────────────────────────────────────────
-PWM_FREQ = 1000   # Hz — 1 kHz is a good balance for L298N and DC motors
+# ── PWM ──────────────────────────────────────────────────────────────────────
+PWM_FREQ = 1000     # Hz — 1 kHz suits L298N and GA25-370 well
 
-# ─────────────────────────────────────────────
-# Speed Constants  (duty cycle, 0–100 %)
-# ─────────────────────────────────────────────
-SPEED_FULL    = 100   # Maximum attack speed
-SPEED_SEARCH  = 60    # Rotation speed during opponent search
-SPEED_REVERSE = 80    # Reverse speed during edge-avoidance maneuver
-SPEED_TURN    = 75    # Turn speed during edge-avoidance spin
+# ── Speed constants  (duty cycle 0–100 %) ────────────────────────────────────
+SPEED_FULL    = 100  # Maximum attack charge speed
+SPEED_SEARCH  = 55   # Rotation speed while scanning
+SPEED_REVERSE = 85   # Reverse burst during edge avoidance
+SPEED_TURN    = 80   # Spin speed during edge avoidance
+SPEED_STALK   = 70   # Approach speed when tracking a moving opponent
+SPEED_CORRECT = 40   # Speed differential for heading correction
 
-# ─────────────────────────────────────────────
-# Timing & Distance Thresholds
-# ─────────────────────────────────────────────
-START_DELAY        = 5.0   # Mandatory pre-match pause (seconds) per sumo rules
-REVERSE_DURATION   = 0.35  # How long to reverse when edge is detected (seconds)
-SPIN_DURATION      = 0.40  # How long to spin away from edge (seconds)
-ULTRASONIC_TIMEOUT = 0.025 # Max echo wait time → ~4.25 m max range (seconds)
-ATTACK_DISTANCE_CM = 60.0  # Charge at opponent when closer than this (cm)
-LOOP_HZ            = 50    # Main FSM loop frequency (iterations per second)
+# ── Timing thresholds (seconds) ──────────────────────────────────────────────
+START_DELAY        = 5.0    # Mandatory pre-match pause (sumo rules)
+REVERSE_DURATION   = 0.30   # Reverse burst length on edge detection
+SPIN_DURATION      = 0.45   # Spin-away duration after reverse
+ULTRASONIC_TIMEOUT = 0.025  # Echo wait cap → ~4.25 m max range
+
+# ── Distance thresholds (cm) ──────────────────────────────────────────────────
+ATTACK_DISTANCE_CM  = 80.0  # Charge at full speed when opponent closer than this
+STALK_DISTANCE_CM   = 150.0 # Begin stalking/tracking when opponent closer than this
+CLOSE_DISTANCE_CM   = 25.0  # "Ram" distance — opponent is right in front
+
+# ── FSM / strategy timing (seconds) ──────────────────────────────────────────
+SCAN_STEP_TIME      = 0.55  # Time to spin one step before re-checking sensors
+LOST_TIMEOUT        = 1.2   # Seconds without detection before returning to SEARCH
+ORBIT_DURATION      = 0.25  # Arc-turn duration during ORBIT tactic
+RAM_BURST_DURATION  = 0.18  # Short full-speed burst when very close
+
+# ── Main loop ─────────────────────────────────────────────────────────────────
+LOOP_HZ = 50        # FSM tick rate (iterations per second)
+
+# ── Power warning (read before wiring) ────────────────────────────────────────
+# MT3608 HW-045 is BOOST (step-up) only. Input: single 18650 cell (~3.7 V).
+# Output: set to exactly 5.00 V. Verify your module's continuous current rating
+# under load — some MT3608 boards deliver only 0.5 A continuous despite "2 A"
+# labels. If the Pi resets on motor start, add a 1000 µF/10 V capacitor across
+# VOUT+/VOUT− to buffer the transient. Motor power (11.1 V) goes directly to
+# L298N only — never connect motor supply to the Pi 5 V rail.
