@@ -37,6 +37,16 @@ void motorForward(uint8_t speed) {
     setRight(speed, true);
 }
 
+void motorSpinLeft(uint8_t speed) {
+    setLeft(speed,  false);
+    setRight(speed, true);
+}
+
+void motorSpinRight(uint8_t speed) {
+    setLeft(speed,  true);
+    setRight(speed, false);
+}
+
 void motorStop() {
     setLeft(0, true);
     setRight(0, true);

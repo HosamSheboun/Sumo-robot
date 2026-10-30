@@ -22,6 +22,14 @@
 #define RIGHT_IN4  5    // D5  → L298N IN4  direction bit B
 #define RIGHT_ENB  6    // D6  → L298N ENB  PWM speed
 
+// ── HC-SR04 Ultrasonic Sensor ───────────────────────────────────────────────────
+// TRIG → D12, ECHO → D13 (both 5V logic — connect directly, no resistor divider)
+#define TRIG_PIN    12
+#define ECHO_PIN    13
+
+#define ATTACK_DIST_CM   80   // charge forward when opponent closer than this
+#define NO_DETECT_CM    200   // treat as "nothing seen" above this distance
+
 // ── GA25-370 Encoders (wired but not used in this build) ─────────────────────
 // Kept here for reference. Encoder wires must still be connected to power/GND
 // so the encoder board does not float. Yellow and white wires can be left
@@ -46,7 +54,9 @@
 #define LED_PIN     11  // D11 → LED anode via 330Ω resistor
 
 // ── Speed (analogWrite 0–255) ─────────────────────────────────────────────────
-#define SPEED_FULL  255  // Full speed forward (255 = 100%)
+#define SPEED_FULL    255  // Full speed forward / attack
+#define SPEED_SPIN    180  // Speed while spinning to search
 
 // ── Timing ────────────────────────────────────────────────────────────────────
 #define START_DELAY_MS  5000UL  // 5-second mandatory pre-match pause
+#define SPIN_STEP_MS     500UL  // spin this long before re-checking sensor

@@ -9,4 +9,6 @@
 
 void motorsInit();
 void motorForward(uint8_t speed = SPEED_FULL);
+void motorSpinLeft(uint8_t speed = SPEED_SPIN);
+void motorSpinRight(uint8_t speed = SPEED_SPIN);
 void motorStop();

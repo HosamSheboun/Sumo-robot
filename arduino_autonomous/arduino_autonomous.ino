@@ -1,5 +1,5 @@
 // arduino_autonomous.ino
-// After power-on: wait 5 seconds, then drive forward at full speed forever.
+// Strategy: spin in place to search for opponent → charge when detected → spin again if lost.
 // Rocker switch OFF → stop instantly. Switch back ON → restart 5-second delay.
 
 #include <Arduino.h>
@@ -10,50 +10,63 @@ static inline bool switchIsOn() { return digitalRead(SWITCH_PIN) == LOW; }
 static inline void ledOn()      { digitalWrite(LED_PIN, HIGH); }
 static inline void ledOff()     { digitalWrite(LED_PIN, LOW);  }
 
-void setup() {
-    pinMode(SWITCH_PIN, INPUT_PULLUP);
-    pinMode(LED_PIN,    OUTPUT);
-    ledOff();
-    motorsInit();
+// Returns distance in cm. Returns NO_DETECT_CM if nothing seen.
+static float readDistance() {
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, LOW);
+    long duration = pulseIn(ECHO_PIN, HIGH, 25000UL); // 25ms timeout ≈ 430cm
+    if (duration == 0) return NO_DETECT_CM;
+    return duration * 0.0343f / 2.0f;
+}
 
-    // Wait for rocker switch to be turned ON
+static void waitForSwitch() {
+    motorStop();
+    ledOff();
     while (!switchIsOn()) {
         ledOn();  delay(200);
         ledOff(); delay(800);
     }
+}
 
-    // 5-second mandatory start delay — LED blinks fast
+static void startDelay() {
     unsigned long start = millis();
-    while (millis() - start < 5000UL) {
+    while (millis() - start < START_DELAY_MS) {
         ledOn();  delay(100);
         ledOff(); delay(100);
     }
-
-    // Armed — LED solid ON, start moving
     ledOn();
-    motorForward(SPEED_FULL);
+}
+
+void setup() {
+    pinMode(SWITCH_PIN, INPUT_PULLUP);
+    pinMode(LED_PIN,    OUTPUT);
+    pinMode(TRIG_PIN,   OUTPUT);
+    pinMode(ECHO_PIN,   INPUT);
+    ledOff();
+    motorsInit();
+
+    waitForSwitch();
+    startDelay();
 }
 
 void loop() {
-    // If switch is flipped OFF, stop immediately
     if (!switchIsOn()) {
-        motorStop();
-        ledOff();
+        waitForSwitch();
+        startDelay();
+        return;
+    }
 
-        // Wait until switch is turned back ON
-        while (!switchIsOn()) {
-            ledOn();  delay(200);
-            ledOff(); delay(800);
-        }
+    float dist = readDistance();
 
-        // Restart 5-second delay
-        unsigned long start = millis();
-        while (millis() - start < 5000UL) {
-            ledOn();  delay(100);
-            ledOff(); delay(100);
-        }
-
-        ledOn();
+    if (dist < ATTACK_DIST_CM) {
+        // Opponent detected — charge!
         motorForward(SPEED_FULL);
+    } else {
+        // Nothing seen — spin right to search
+        motorSpinRight(SPEED_SPIN);
+        delay(SPIN_STEP_MS);
     }
 }
