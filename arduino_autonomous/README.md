@@ -1,6 +1,6 @@
-# Arduino Nano Sumo Robot — Spin Search + Ultrasonic Attack
+# Arduino Uno Sumo Robot — Spin Search + Ultrasonic Attack
 
-This folder contains the Arduino Nano code for the sumo robot.
+This folder contains the Arduino Uno code for the sumo robot.
 
 **Behaviour:**
 - Flip the rocker switch ON
@@ -31,7 +31,7 @@ This folder contains the Arduino Nano code for the sumo robot.
 
 | # | Part | Qty | Notes |
 |---|------|-----|-------|
-| 1 | Arduino Nano (ATmega328P) | 1 | The brain |
+| 1 | Arduino Uno (ATmega328P) | 1 | The brain |
 | 2 | GA25-370 DC Gear Motor with Encoder (12V, 130RPM) | 2 | Left and right drive |
 | 3 | Robot Wheel 65mm × 26mm + 4mm metal coupler | 2 | Drive wheels |
 | 4 | Metal caster wheel | 1 | Front support |
@@ -44,7 +44,7 @@ This folder contains the Arduino Nano code for the sumo robot.
 | 11 | 330Ω resistor | 1 | Protects the LED from burning out |
 
 > No MT3608 converter needed. No IR sensors needed. No resistor divider needed for the HC-SR04
-> because the Arduino Nano runs at 5V logic — same as the sensor.
+> because the Arduino Uno runs at 5V logic — same as the sensor.
 
 ---
 
@@ -56,51 +56,53 @@ This folder contains the Arduino Nano code for the sumo robot.
          ├──────────────────────────► L298N 12V terminal
          │                            └──► Both GA25-370 motors
          │
-         └──────────────────────────► Arduino Nano VIN pin
-                                       └──► Nano onboard regulator → 5V
-                                            ├──► Nano logic
+         └──────────────────────────► Arduino Uno VIN pin
+                                       └──► Uno onboard regulator → 5V
+                                            ├──► Uno logic
                                             ├──► HC-SR04 VCC
                                             └──► Encoder green wires (VCC)
 
 Common GND rail:
-  Battery (−) ── L298N GND ── Nano GND ── HC-SR04 GND ── Both encoder dark blue wires
+  Battery (−) ── L298N GND ── Uno GND ── HC-SR04 GND ── Both encoder dark blue wires
 ```
 
-### Why the Nano VIN Pin Works Here
+### Why the Uno VIN Pin Works Here
 
-The Arduino Nano has a built-in voltage regulator on its VIN pin that
+The Arduino Uno has a built-in voltage regulator on its VIN pin that
 accepts 7V to 12V and outputs a clean 5V. Your 11.1V battery pack is
 within this range so no extra converter is needed.
 
 > ⚠️ Connect the battery to the **VIN pin** only — never to the 5V pin.
-> The 5V pin bypasses the regulator and will instantly destroy the Nano.
+> The 5V pin bypasses the regulator and will instantly destroy the Uno.
 
-> ⚠️ The Nano's onboard regulator may get warm under load. This is normal.
+> ⚠️ The Uno's onboard regulator may get warm under load. This is normal.
 > If it gets very hot, use a separate LM2596 buck converter for 5V instead.
 
 ---
 
 ## 3. Complete Wiring Guide
 
-### Arduino Nano Pin Assignments
+### Arduino Uno Pin Assignments
 
 ```
-Nano Pin │ Connected To
+Uno Pin  │ Connected To
 ─────────┼──────────────────────────────────────────────────────
 VIN      │ Battery pack (+) ~11.1V
 GND      │ Common GND rail
 5V       │ HC-SR04 VCC + both encoder green wires
+D3  (~)  │ L298N ENB  (Right motor PWM speed)
 D4       │ L298N IN3  (Right motor direction A)
 D5       │ L298N IN4  (Right motor direction B)
-D6       │ L298N ENB  (Right motor PWM speed)
 D7       │ L298N IN1  (Left motor direction A)
 D8       │ L298N IN2  (Left motor direction B)
-D9       │ L298N ENA  (Left motor PWM speed)
+D9  (~)  │ L298N ENA  (Left motor PWM speed)
 D10      │ Rocker switch (other pin → GND)
-D11      │ LED anode via 330Ω resistor → GND
-D12      │ HC-SR04 TRIG
-D13      │ HC-SR04 ECHO
+D11      │ HC-SR04 TRIG
+D12      │ HC-SR04 ECHO
+D13      │ LED anode via 330Ω resistor → GND (also lights the Uno built-in LED)
 ```
+
+> (~) means the pin is PWM-capable. ENA and ENB must use PWM pins or speed control will not work.
 
 ### HC-SR04 Ultrasonic Sensor
 
@@ -109,14 +111,13 @@ Mount the sensor at the front of the robot, facing forward.
 ```
 HC-SR04 Pin │ Connected To
 ────────────┼──────────────────────────────────────────────────
-VCC         │ Nano 5V
+VCC         │ Uno 5V
 GND         │ Common GND rail
-TRIG        │ Nano D12
-ECHO        │ Nano D13
+TRIG        │ Uno D11
+ECHO        │ Uno D12
 ```
 
-> No resistor divider needed here. The Raspberry Pi version needs one
-> because the Pi runs at 3.3V logic. The Arduino Nano runs at 5V logic —
+> No resistor divider needed. The Arduino Uno runs at 5V logic —
 > same as the HC-SR04 — so you connect ECHO directly.
 
 ### GA25-370 Motor — All 6 Wires
@@ -128,7 +129,7 @@ Wire Colour │ What It Is        │ Where It Goes
 ────────────┼───────────────────┼──────────────────────────────────────
 Red         │ Motor power +     │ L298N OUT1 (left) / OUT3 (right)
 Black       │ Motor power −     │ L298N OUT2 (left) / OUT4 (right)
-Green       │ Encoder VCC 5V    │ Nano 5V pin
+Green       │ Encoder VCC 5V    │ Uno 5V pin
 Dark Blue   │ Encoder GND       │ Common GND rail
 Yellow      │ Encoder Channel A │ Leave unconnected (not used)
 White       │ Encoder Channel B │ Leave unconnected (not used)
@@ -142,41 +143,44 @@ White       │ Encoder Channel B │ Leave unconnected (not used)
 ### L298N Motor Driver — All Terminals
 
 ```
-L298N Terminal │ Connected To                      │ Why
-───────────────┼───────────────────────────────────┼──────────────────────
-12V            │ Battery pack (+) ~11.1V            │ Power for the motors
-GND            │ Common GND rail                    │ Ground reference
-5V output      │ NOT USED — leave unconnected       │ Too noisy for logic
-IN1            │ Nano D7                            │ Left motor direction A
-IN2            │ Nano D8                            │ Left motor direction B
-IN3            │ Nano D4                            │ Right motor direction A
-IN4            │ Nano D5                            │ Right motor direction B
-ENA            │ Nano D9  (REMOVE the ENA jumper)   │ Left motor PWM speed
-ENB            │ Nano D6  (REMOVE the ENB jumper)   │ Right motor PWM speed
-OUT1 / OUT2    │ Left  motor red / black wires      │ Power to left motor
-OUT3 / OUT4    │ Right motor red / black wires      │ Power to right motor
+L298N Terminal │ Connected To                     │ Why
+───────────────┼──────────────────────────────────┼──────────────────────
+12V            │ Battery pack (+) ~11.1V           │ Power for the motors
+GND            │ Common GND rail                   │ Ground reference
+5V output      │ NOT USED — leave unconnected      │ Too noisy for logic
+IN1            │ Uno D7                            │ Left motor direction A
+IN2            │ Uno D8                            │ Left motor direction B
+IN3            │ Uno D4                            │ Right motor direction A
+IN4            │ Uno D5                            │ Right motor direction B
+ENA            │ Uno D9  (REMOVE the ENA jumper)   │ Left motor PWM speed
+ENB            │ Uno D3  (REMOVE the ENB jumper)   │ Right motor PWM speed
+OUT1 / OUT2    │ Left  motor red / black wires     │ Power to left motor
+OUT3 / OUT4    │ Right motor red / black wires     │ Power to right motor
 ```
 
 > ⚠️ REMOVE the two small yellow jumpers on ENA and ENB from the L298N
 > board before wiring. If you leave them in, the motors always run at
-> full speed and the Nano cannot control them at all.
+> full speed and the Uno cannot control them at all.
 
 ### Rocker Switch
 
 ```
-Nano D10 ──── [ROCKER SWITCH] ──── GND
+Uno D10 ──── [ROCKER SWITCH] ──── GND
 ```
 
 One pin of the switch goes to D10. The other pin goes to GND.
-No resistors needed — the Nano has an internal pull-up.
+No resistors needed — the Uno has an internal pull-up.
 
 ### LED
 
 ```
-Nano D11 ──── 330Ω resistor ──── LED (+) long leg ──── LED (−) short leg ──── GND
+Uno D13 ──── 330Ω resistor ──── LED (+) long leg ──── LED (−) short leg ──── GND
 ```
 
 The 330Ω resistor MUST be in series with the LED or it will burn out instantly.
+
+> D13 also drives the Uno's built-in LED on the board, so you can test the LED behaviour
+> without wiring an external LED at all.
 
 ---
 
@@ -247,19 +251,18 @@ motors.cpp              ← L298N motor control — forward, spin left, spin rig
 2. Download **Arduino IDE 2** for your operating system
 3. Install it
 
-### Step 2 — Connect the Nano to Your Laptop
+### Step 2 — Connect the Uno to Your Laptop
 
-Plug the Arduino Nano into your laptop using a **USB Mini-B cable**.
+Plug the Arduino Uno into your laptop using a **USB Type-B cable** (the square-ish connector).
 
 > Some cheap USB cables are charge-only and carry no data.
-> If the Nano does not appear in the port list, try a different cable.
+> If the Uno does not appear in the port list, try a different cable.
 
 ### Step 3 — Configure Arduino IDE
 
 1. Open Arduino IDE
-2. Go to **Tools → Board → Arduino AVR Boards → Arduino Nano**
-3. Go to **Tools → Processor → ATmega328P**
-4. Go to **Tools → Port** → select the port that appeared (e.g. COM3 on Windows)
+2. Go to **Tools → Board → Arduino AVR Boards → Arduino Uno**
+3. Go to **Tools → Port** → select the port that appeared (e.g. COM3 on Windows)
 
 ### Step 4 — Open the Project
 
@@ -272,9 +275,9 @@ Plug the Arduino Nano into your laptop using a **USB Mini-B cable**.
 
 1. Click the **Upload** button (→ arrow) or press **Ctrl+U**
 2. Wait for "Done uploading" at the bottom of the screen
-3. The Nano restarts automatically and runs the code immediately
+3. The Uno restarts automatically and runs the code immediately
 
-> If upload fails, try **Tools → Processor → ATmega328P (Old Bootloader)** and upload again.
+> If upload fails, try a different USB cable or check the correct COM port is selected.
 
 ---
 
@@ -331,16 +334,16 @@ All tuning is done by editing **config.h only**. Never change numbers in any oth
 - Check all GND wires share a common ground rail
 
 ### Robot just drives forward and does not spin
-- Check HC-SR04 wiring — TRIG to D12, ECHO to D13
+- Check HC-SR04 wiring — TRIG to D11, ECHO to D12
 - The sensor may be reading a false close distance on startup
 - Increase `ATTACK_DIST_CM` temporarily to confirm the sensor is working
 
 ### Robot spins but never attacks
 - Hold your hand in front of the sensor — if it still does not attack,
   the sensor is not reading correctly
-- Check HC-SR04 VCC is connected to Nano 5V (not 3.3V)
-- Check TRIG is on D12 and ECHO is on D13
-- Try reducing `ATTACK_DIST_CM` to 120 to make it trigger more easily
+- Check HC-SR04 VCC is connected to Uno 5V
+- Check TRIG is on D11 and ECHO is on D12
+- Try increasing `ATTACK_DIST_CM` to 120 to make it trigger more easily
 
 ### Robot spins past the opponent without attacking
 - Lower `SPIN_STEP_MS` in config.h (e.g. 200) so it checks the sensor more often
@@ -351,13 +354,13 @@ All tuning is done by editing **config.h only**. Never change numbers in any oth
 - Do not change any code — physical wire swap is the correct fix
 
 ### Upload fails
-- Try **Tools → Processor → ATmega328P (Old Bootloader)**
 - Try a different USB cable
 - Check the correct COM port is selected under Tools → Port
+- Make sure **Arduino Uno** is selected under Tools → Board (not Nano)
 
-### Nano gets very hot on VIN
+### Uno gets very hot on VIN
 - The onboard regulator is dissipating the voltage difference as heat
-- Add a small heatsink to the regulator chip on the Nano
+- Add a small heatsink to the regulator chip on the Uno
 - Or use a separate LM2596 buck converter to supply 7–8V to VIN instead of 11.1V
 
 ---
