@@ -8,19 +8,23 @@
 A fully autonomous heavyweight sumo robot that competes without any remote control.
 You flip a switch, put it on the ring, and it fights entirely on its own.
 
-The robot uses a Raspberry Pi Zero 2 W as its brain, two GA25-370 gear motors,
-an HC-SR04 ultrasonic sensor to find opponents, two IR sensors to detect the ring
-boundary, and a 3S 18650 lithium battery pack for power. The chassis is a custom
-box design I made in OpenSCAD and 3D printed.
+The project grew into a **complete multi-controller competition kit** with working
+firmware for 4 different microcontrollers:
 
-The software is a full adaptive Finite State Machine written in Python — 7 states,
-3 fighting tactics that switch automatically based on what's happening in the match,
-and an opponent tracker that remembers where the enemy probably is even when the
-sensor loses sight of it.
+- **Raspberry Pi Zero 2 W** — Python adaptive FSM, 7 states, quadrature encoders,
+  opponent tracker with confidence scoring, adaptive tactic system (RUSHER/STALKER/FLANKER)
+- **ESP32** — Dual-core FreeRTOS, hardware LEDC PWM speed control, sensors on Core 0
+  and strategy on Core 1 simultaneously — fastest reaction time of all versions
+- **Arduino Uno** — 4-phase timed technique timeline with both IR sensors and HC-SR04
+- **Arduino Nano** — Same firmware as Uno in compact form factor
 
-I also built two extra versions: an Arduino Uno version with a 2-minute technique
-timeline (Matador → Bulldozer → Flanker → Berserker), and a manual Bluetooth
-control mode using the Dabble app on my phone.
+All four versions run the same sensor suite: one front-facing HC-SR04 ultrasonic
+sensor for opponent detection and two downward-facing IR line sensors for white
+boundary edge avoidance. Every version has the 4-phase technique system:
+Matador → Bulldozer → Flanker → Berserker.
+
+The chassis is a custom box design made in OpenSCAD and 3D printed. I also built a
+manual Bluetooth control mode using the Dabble app on my phone.
 
 ---
 
@@ -320,14 +324,81 @@ nothing and the motor driver starts in an undefined state. Fixed by calling
 | Metric | Value |
 |--------|-------|
 | Total lines of Python code | ~800 |
-| Total lines of C++ code | ~350 |
-| Number of FSM states | 7 |
-| Number of fighting tactics | 3 (+ forced RUSHER) |
-| Number of technique phases (Arduino) | 4 |
-| Sensor reading rate | 50 Hz |
-| Hardware watchdog timeout | 60 seconds |
+| Total lines of C++ code | ~1,200 (across Uno, Nano, ESP32) |
+| Number of microcontroller versions | 4 (Pi, ESP32, Uno, Nano) |
+| Number of FSM states (Pi) | 7 |
+| Number of fighting tactics (Pi) | 3 (+ forced RUSHER) |
+| Number of technique phases (Arduino/ESP32) | 4 |
+| Sensor reading rate (Pi) | 50 Hz |
+| Sensor reading rate (ESP32 Core 0) | ~1000 Hz |
+| Hardware watchdog timeout (Pi) | 60 seconds |
 | 3D printed parts | 4 (chassis, lid, tray, blade) |
 | Bugs fixed | 6 documented + many more |
+
+---
+
+*Built for Terra Hack Club*
+
+---
+
+## Entry 12 — Going Multi-Controller: Uno, Nano, and ESP32
+
+After the Pi version was complete and the Arduino Uno build was running well,
+I wanted to make this project genuinely useful for other teams at the competition —
+not just a single-MCU project.
+
+The problem is that not every team has the same hardware. Some have an Uno, some a Nano,
+some an ESP32. The competition doesn't care which brain you use as long as it's autonomous.
+
+So I expanded to four controllers. Here's what I learned from each one:
+
+**Arduino Nano vs Arduino Uno:**
+The pins are basically identical (D0–D13, A0–A5 map the same). The only real differences
+are the Nano's physical size (18 × 45mm vs Uno's 53 × 69mm — a massive chassis footprint
+difference), the Mini-USB connector instead of Type-B, and the clone boards that ship
+with an old bootloader. On those clones you have to set *ATmega328P (Old Bootloader)*
+in Arduino IDE or the upload fails with a cryptic `stk500_getsync()` error. I wasted
+20 minutes on this before figuring it out. Now it's in the README.
+
+**ESP32 — the real upgrade:**
+The ESP32 changes everything. The ATmega328P in the Uno/Nano runs at 16 MHz and has a
+single core. The ESP32 runs at 240 MHz with two cores. In practice this means:
+
+The ultrasonic sensor polling (`pulseIn()` calls) normally blocks the main loop on
+Arduino — you can't do anything else while waiting for the echo. On ESP32 I moved the
+entire sensor reading job onto Core 0 as a FreeRTOS task. Core 1 runs the combat
+strategy and never waits for sensor data. Both run simultaneously.
+
+This cuts effective reaction time from ~15–25ms on the Uno to ~3–5ms on the ESP32.
+In a sumo match that difference is visible — the Matador dodge triggers before the
+opponent actually reaches you rather than at the moment of impact.
+
+The ESP32 also has hardware LEDC PWM, which means you get smooth speed control (0–255)
+without the audible whine that `analogWrite()` produces on the Uno. The motors run
+quieter and the arc maneuvers are much smoother because outer and inner wheel speeds
+can be precisely set.
+
+**The ESP32 voltage trap:**
+The biggest danger with ESP32 is that it uses 3.3V logic but the HC-SR04 ECHO pin
+outputs 5V. That 5V will gradually damage the ESP32 GPIO over time, or instantly
+destroy it in a power spike. You need a 1kΩ + 2kΩ resistor voltage divider on the
+ECHO line to bring it down to 3.33V.
+
+I also discovered that GPIO34–39 on the ESP32 are input-only and have **no internal
+pull-up resistors** — so using GPIO34 for the rocker switch meant the pin floated
+when the switch was open, causing random phantom switch triggers. Changed to GPIO13
+which has proper internal pull-up support.
+
+**Power for Arduino versions:**
+For the Pi, I used an MT3608 boost converter on a single-cell tap to get 5V.
+But for the Arduino Uno/Nano and ESP32, I found a simpler solution:
+the L298N motor driver has a built-in 78M05 linear regulator. When the 5V-EN jumper
+is installed, it puts out a regulated 5V from the motor battery — enough for the
+microcontroller, HC-SR04, two IR sensors, and both encoder VCC lines, all from
+one power source. No MT3608 needed.
+
+This simplifies the wiring significantly for non-Pi builds. Less wiring = fewer things
+to shake loose during a match impact.
 
 ---
 

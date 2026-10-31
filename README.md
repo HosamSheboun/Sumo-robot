@@ -1,7 +1,8 @@
-# Pi Zero 2 W Autonomous Heavyweight Sumo Robot
+# Autonomous Heavyweight Sumo Robot — Multi-Controller Competition System
 
-A fully autonomous 3 kg sumo robot built around a Raspberry Pi Zero 2 W.
-No remote control. Once the switch is flipped, it thinks and fights entirely on its own.
+A fully autonomous 3 kg sumo robot project with **complete firmware for 4 different controllers** — Raspberry Pi Zero 2 W, Arduino Uno, Arduino Nano, and ESP32 — each with battle-tested strategies, edge avoidance, and ultrasonic opponent tracking.
+
+No remote control. Flip the switch, place on the ring, it fights entirely on its own.
 
 ---
 
@@ -10,401 +11,359 @@ No remote control. Once the switch is flipped, it thinks and fights entirely on 
 ```
 Sumo robot/
 │
-├── README.md                    ← This file — master overview of the whole project
+├── README.md                        ← This file — master overview of the whole project
 │
-├── pi_autonomous/               ← Raspberry Pi Zero 2 W autonomous version
-│   ├── config.py                ← All BCM pins and tuning constants
-│   ├── main.py                  ← Entry point, switch, LED, watchdog, 50Hz loop
-│   ├── motors.py                ← L298N + quadrature encoder control
-│   ├── sensors.py               ← HC-SR04, IR sensors, OpponentTracker
-│   ├── strategy.py              ← 7-state adaptive FSM + TacticAdaptor
-│   ├── setup_pi.sh              ← One-time Pi setup script
-│   └── README.md                ← Full wiring, FSM explanation, tuning guide
+├── pi_autonomous/                   ← Raspberry Pi Zero 2 W — most capable version
+│   ├── config.py                    ← All BCM pins and tuning constants
+│   ├── main.py                      ← Entry point, switch, LED, watchdog, 50Hz loop
+│   ├── motors.py                    ← L298N + quadrature encoder control
+│   ├── sensors.py                   ← HC-SR04, IR sensors, OpponentTracker
+│   ├── strategy.py                  ← 7-state adaptive FSM + TacticAdaptor
+│   ├── setup_pi.sh                  ← One-time Pi setup script
+│   └── README.md                    ← Full wiring, FSM explanation, tuning guide
 │
-├── arduino_autonomous/          ← Standalone Arduino Uno version (no Pi needed)
-│   ├── arduino_autonomous.ino   ← Main sketch: 2-minute technique timeline
-│   ├── config.h                 ← All pins and timing constants
-│   ├── motors.h / motors.cpp    ← L298N motor control (7 movement functions)
-│   └── README.md                ← Full wiring guide and tuning reference
+├── arduino_uno/                     ← Arduino Uno — 4-phase combat timeline
+│   ├── arduino_uno.ino              ← Main sketch: Matador→Bulldozer→Flanker→Berserker
+│   ├── config.h                     ← All pins and timing constants
+│   ├── motors.h / motors.cpp        ← L298N motor control (7 movement functions)
+│   └── README.md                    ← Full wiring guide and tuning reference
 │
-├── manual_control/              ← Standalone Pi manual drive via Dabble Bluetooth
-│   ├── main.py                  ← Entry point: switch, LED, joystick loop
-│   ├── motors.py                ← L298N + encoder control with tank-mix
-│   ├── bluetooth.py             ← Dabble SPP packet parser, RFCOMM socket server
-│   ├── config.py                ← Pins, joystick settings, BT name
-│   └── README.md                ← Pairing guide, driving controls, systemd setup
+├── arduino_nano/                    ← Arduino Nano — compact build, same strategy as Uno
+│   ├── arduino_nano.ino             ← Main sketch (Nano-adapted pins)
+│   ├── config.h                     ← Nano-specific pins
+│   ├── motors.h / motors.cpp        ← L298N motor control
+│   └── README.md                    ← Nano-specific upload guide (Old Bootloader)
 │
-├── Sumo_Robot_V2_3D_files/      ← 3D-printed chassis design (OpenSCAD + STL)
-│   ├── Sumo_Box_Concept_v2.scad ← Parametric source (edit this)
-│   ├── Sumo_Box_Chassis_v2.stl  ← Main enclosure body
-│   ├── Sumo_Box_Lid_v2.stl      ← Removable lid
+├── esp32/                           ← ESP32 — dual-core, PWM speed control, fastest
+│   ├── esp32_sumo.ino               ← Dual-core FreeRTOS main sketch
+│   ├── config.h                     ← GPIO pins, speeds, timing, PWM settings
+│   ├── motors.h / motors.cpp        ← LEDC hardware PWM motor control
+│   └── README.md                    ← Voltage divider guide, board support install
+│
+├── manual_control/                  ← Raspberry Pi Zero 2 W — Bluetooth manual drive
+│   ├── main.py                      ← Entry point: switch, LED, joystick loop
+│   ├── motors.py                    ← L298N + encoder control with tank-mix
+│   ├── bluetooth.py                 ← Dabble SPP packet parser, RFCOMM socket server
+│   ├── config.py                    ← Pins, joystick settings, BT name
+│   └── README.md                    ← Pairing guide, driving controls, systemd setup
+│
+├── Sumo_Robot_V2_3D_files/          ← 3D-printed chassis design (OpenSCAD + STL)
+│   ├── Sumo_Box_Concept_v2.scad     ← Parametric source (edit this)
+│   ├── Sumo_Box_Chassis_v2.stl      ← Main enclosure body
+│   ├── Sumo_Box_Lid_v2.stl          ← Removable lid
 │   ├── Sumo_Electronics_Tray_v2.stl ← Internal electronics deck
-│   ├── Sumo_Front_Blade_v2.stl  ← Front wedge/blade
-│   ├── README_Sumo_Box_v2.md    ← Print settings, assembly notes
-│   └── *.png                    ← Render previews
+│   ├── Sumo_Front_Blade_v2.stl      ← Front wedge/blade
+│   ├── README_Sumo_Box_v2.md        ← Print settings, assembly notes
+│   └── *.png                        ← Render previews
 │
-└── docs/                        ← Documentation and competition reference
-    ├── DEVLOG.md                ← Full Terra Hack Club development log
-    ├── Poster_Rulebook.pdf      ← Competition poster and rulebook
+└── docs/                            ← Documentation and competition reference
+    ├── DEVLOG.md                    ← Full Terra Hack Club development log
+    ├── Poster_Rulebook.pdf          ← Competition poster and rulebook
     └── Sumo Robot Competition Handbook V1.pdf ← Full competition handbook
 ```
 
 ---
 
-## Which Version Should I Use?
+## Which Controller Should I Use?
 
-| Version | Controller | What It Does | When to Use |
-|---------|-----------|-------------|-------------|
-| **Pi Autonomous** (`pi_autonomous/`) | Raspberry Pi Zero 2 W | Full 7-state adaptive FSM, encoder feedback, opponent tracking, edge avoidance | Competition — most capable |
-| **Arduino Autonomous** (`arduino_autonomous/`) | Arduino Uno | 2-minute technique timeline: Matador → Bulldozer → Flanker → Berserker | Simpler build, no Pi needed |
-| **Manual Control** (`manual_control/`) | Raspberry Pi Zero 2 W | Drive with Dabble Bluetooth joystick app on your phone | Testing, demos, practice |
+| Version | Controller | Brain | Sensors | Best For |
+|---------|-----------|-------|---------|----------|
+| **Pi Autonomous** (`pi_autonomous/`) | Raspberry Pi Zero 2 W | Python FSM, 7 states, encoder feedback, opponent tracker, tactic adaptor | HC-SR04 + 2× IR + encoders | Most capable — competition top pick |
+| **ESP32** (`esp32/`) | ESP32 dual-core 240MHz | Dual-core FreeRTOS, LEDC PWM, 5-state priority FSM + 2-min timeline | HC-SR04 + 2× IR | Fastest reaction time — best Arduino-class option |
+| **Arduino Uno** (`arduino_uno/`) | Arduino Uno | 4-phase technique timeline, edge avoid, charge detection | HC-SR04 + 2× IR | Reliable, simple build |
+| **Arduino Nano** (`arduino_nano/`) | Arduino Nano | Same strategy as Uno, compact form factor | HC-SR04 + 2× IR | Space-constrained chassis |
+| **Manual Control** (`manual_control/`) | Raspberry Pi Zero 2 W | Dabble Bluetooth joystick | — | Testing, demos, practice driving |
 
-> Each folder is completely standalone. They do not share any code or imports.
+> Each folder is completely standalone. No shared code or imports between folders.
 
 ---
 
 ## Hardware Overview
 
-### Robot Specs
-- Weight limit: ≤ 3 kg
-- Size limit: ≤ 20 × 20 cm
-- Arena: black circular dohyo with white boundary ring
+### Competition Specs
+- **Weight limit:** ≤ 3 kg
+- **Size limit:** ≤ 20 × 20 cm
+- **Arena:** Black circular dohyo, white boundary ring
 
-### Parts List
+### Master Parts List
 
-| # | Part | Qty | Used In |
-|---|------|-----|---------|
-| 1 | Raspberry Pi Zero 2 W | 1 | Pi versions |
-| 2 | Arduino Uno (ATmega328P) | 1 | Arduino version |
-| 3 | GA25-370 DC Gear Motor with Encoder (12V, 130RPM) | 2 | All versions |
-| 4 | Robot Wheel 65mm × 26mm + 4mm metal coupler | 2 | All versions |
-| 5 | Metal caster wheel | 1 | All versions |
-| 6 | L298N Dual H-Bridge Motor Driver Module | 1 | All versions |
-| 7 | 18650 3.7V 1200mAh button-top Li-ion battery | 3 | All versions |
-| 8 | 3-slot 18650 series battery holder | 1 | All versions |
-| 9 | MT3608 DC-DC Boost Converter (HW-045) | 1 | Pi versions only |
-| 10 | HC-SR04 Ultrasonic Sensor | 1 | All versions |
-| 11 | Downward IR Line Sensor (3-pin digital) | 2 | Pi versions only |
-| 12 | Black Rocker Switch (2-pin ON/OFF) | 1 | All versions |
-| 13 | LED (any colour, 3mm or 5mm) | 1 | All versions |
-| 14 | 330Ω resistor | 1 | All versions |
-| 15 | 1kΩ resistor | 1 | Pi versions only |
-| 16 | 2kΩ resistor | 1 | Pi versions only |
+| # | Component | Qty | Pi | Uno/Nano | ESP32 |
+|---|-----------|-----|----|----|-------|
+| 1 | Raspberry Pi Zero 2 W | 1 | ✅ | — | — |
+| 2 | Arduino Uno (ATmega328P) | 1 | — | ✅ | — |
+| 3 | Arduino Nano (ATmega328P) | 1 | — | ✅ | — |
+| 4 | ESP32 Dev Module (WROOM-32) | 1 | — | — | ✅ |
+| 5 | GA25-370 DC Gear Motor (12V, 130RPM) | 2 | ✅ | ✅ | ✅ |
+| 6 | Robot Wheel 65mm × 26mm + 4mm coupler | 2 | ✅ | ✅ | ✅ |
+| 7 | Metal swivel caster wheel | 1 | ✅ | ✅ | ✅ |
+| 8 | L298N Dual H-Bridge Motor Driver | 1 | ✅ | ✅ | ✅ |
+| 9 | HC-SR04 Ultrasonic Sensor | 1 | ✅ | ✅ | ✅ |
+| 10 | Downward IR Line Sensor (TCRT5000 / 3-pin digital) | 2 | ✅ | ✅ | ✅ |
+| 11 | 3S 18650 Li-ion Battery Pack (~11.1V) | 1 | ✅ | ✅ | ✅ |
+| 12 | MT3608 DC-DC Boost Converter (HW-045) | 1 | ✅ | — | — |
+| 13 | 1kΩ resistor (ECHO divider) | 1 | ✅ | — | ✅ |
+| 14 | 2kΩ resistor (ECHO divider) | 1 | ✅ | — | ✅ |
+| 15 | Rocker Switch (2-pin SPST) | 1 | ✅ | ✅ | ✅ |
+| 16 | LED (any colour) + 330Ω resistor | 1 | ✅ | ✅ | ✅ |
 
 ---
 
 ## Power Architecture
 
-### Pi Versions (Autonomous + Manual Control)
+### Pi Version (MT3608 single-cell tap)
 
 ```
 3× 18650 in series (~11.1V)
          │
-         ├──────────────────────────────────► L298N 12V terminal → Both motors
+         ├───────────────────────────────► L298N 12V terminal → Both motors
          │
-         └── Single cell tap (~3.7V) ────────► MT3608 VIN+
-              Battery (−) ──────────────────► MT3608 VIN−
-                                               │
-                                        MT3608 VOUT+ = 5.0V
-                                               │
-                          ┌────────────────────┼──────────────────────┐
-                          ▼                    ▼                      ▼
-                   Pi Zero 2 W Pin 2     HC-SR04 VCC          Both IR sensors VCC
-                                                               Both encoder green wires
+         └── Single cell tap (~3.7V) ──► MT3608 VIN+ → 5.0V output
+                                          │
+              ┌──────────────────────────┬┴──────────────────────┐
+              ▼                          ▼                       ▼
+       Pi Zero 2 W Pin 2          HC-SR04 VCC           Both IR sensors VCC
+                                                   Both encoder green wires
 
 Common GND: Battery(−) ── L298N GND ── MT3608 VOUT− ── Pi GND ── All sensor GNDs
 ```
 
-> ⚠️ The MT3608 is boost-only (step-up). You MUST tap a single cell (~3.7V),
-> not the full pack (11.1V). Set output to exactly 5.00V before connecting the Pi.
-> Verify with a multimeter. More than 5.1V will permanently destroy the Pi.
+> ⚠️ MT3608 is boost-only. Tap a single cell (~3.7V), NOT the full pack.  
+> Set output to exactly 5.00V with a multimeter before connecting the Pi.
 
-### Arduino Version
+### Arduino Uno / Nano (L298N 5V output)
 
 ```
 3× 18650 in series (~11.1V)
          │
-         ├──────────────────────────────────► L298N 12V terminal → Both motors
+         ├───────────────────────────────► L298N 12V terminal → Both motors
          │
-         └──────────────────────────────────► Arduino Uno VIN pin
-                                               └──► Uno onboard regulator → 5V
-                                                    ├──► Uno logic
-                                                    ├──► HC-SR04 VCC
-                                                    └──► Encoder green wires
+[L298N 5V-EN Jumper ON]
+         │
+         └─ L298N "5V" Screw Terminal ──► Arduino 5V pin (Uno/Nano)
+                                           ├── Uno/Nano logic
+                                           ├── HC-SR04 VCC
+                                           ├── Both IR sensor VCC
+                                           └── Both encoder green wires
 
-Common GND: Battery(−) ── L298N GND ── Uno GND ── HC-SR04 GND ── Encoder dark blue wires
+Common GND: Battery(−) ── L298N GND ── Arduino GND ── All sensor GNDs
 ```
+
+> ⚠️ Wire to the Arduino **5V pin** (NOT VIN). VIN requires 7V+ minimum.
+
+### ESP32 (L298N 5V → ESP32 VIN)
+
+```
+3× 18650 in series (~11.1V)
+         │
+         ├───────────────────────────────► L298N 12V terminal → Both motors
+         │
+[L298N 5V-EN Jumper ON]
+         │
+         └─ L298N "5V" Screw Terminal ──► ESP32 Dev Board VIN pin
+                                           └── Onboard 3.3V LDO → ESP32 logic
+
+HC-SR04 ECHO (5V) ─── 1kΩ ─── GPIO19 ─── 2kΩ ─── GND   (divider → 3.33V)
+```
+
+> ⚠️ ESP32 GPIO is 3.3V only. HC-SR04 ECHO **MUST** go through a 1kΩ + 2kΩ voltage divider.
 
 ---
 
-## Pin Reference
+## GA25-370 Motor — 6-Wire Reference
 
-### Pi Zero 2 W — BCM Pin Assignments (all Pi versions)
+| Wire Colour | Function | Pi version | Uno/Nano | ESP32 |
+|-------------|----------|-----------|----------|-------|
+| Red | Motor terminal (+) | L298N OUT1/OUT3 | L298N OUT1/OUT3 | L298N OUT1/OUT3 |
+| Black | Motor terminal (−) | L298N OUT2/OUT4 | L298N OUT2/OUT4 | L298N OUT2/OUT4 |
+| **Green** | **Encoder VCC 5V** | **MT3608 5V rail** | **L298N 5V terminal** | **L298N 5V terminal** |
+| **Dark Blue** | **Encoder GND** | **Common GND** | **Common GND** | **Common GND** |
+| Yellow | Encoder Channel A | BCM5 (L) / BCM19 (R) | Unconnected | Unconnected |
+| White | Encoder Channel B | BCM6 (L) / BCM26 (R) | Unconnected | Unconnected |
 
-```
-BCM Pin │ Physical │ Connected To
-────────┼──────────┼──────────────────────────────────────────────────────
-BCM 17  │ Pin 11   │ L298N IN1   — left motor direction A
-BCM 18  │ Pin 12   │ L298N ENA   — left motor PWM speed
-BCM 27  │ Pin 13   │ L298N IN2   — left motor direction B
-BCM 22  │ Pin 15   │ L298N IN3   — right motor direction A
-BCM 23  │ Pin 16   │ L298N IN4   — right motor direction B
-BCM 24  │ Pin 18   │ HC-SR04 TRIG
-BCM 25  │ Pin 22   │ HC-SR04 ECHO (via 1kΩ + 2kΩ resistor divider → 3.33V)
-BCM  5  │ Pin 29   │ Left encoder Channel A (yellow wire)
-BCM  6  │ Pin 31   │ Left encoder Channel B (white wire)
-BCM 12  │ Pin 32   │ Front IR sensor OUT
-BCM 13  │ Pin 33   │ L298N ENB   — right motor PWM speed
-BCM 19  │ Pin 35   │ Right encoder Channel A (yellow wire)
-BCM 16  │ Pin 36   │ Back IR sensor OUT
-BCM 26  │ Pin 37   │ Right encoder Channel B (white wire)
-BCM 20  │ Pin 38   │ LED anode via 330Ω resistor → GND
-BCM 21  │ Pin 40   │ Rocker switch (other pin → GND)
-Pin  2  │ 5V       │ MT3608 VOUT+ (power IN to Pi)
-Pin  6  │ GND      │ Common GND rail
-```
-
-### Arduino Uno — Pin Assignments (arduino_autonomous only)
-
-```
-Uno Pin  │ Connected To
-─────────┼──────────────────────────────────────────────────────────────
-VIN      │ Battery pack (+) ~11.1V
-GND      │ Common GND rail
-5V       │ HC-SR04 VCC + both encoder green wires
-D4       │ L298N IN3  — right motor direction A
-D5       │ L298N IN4  — right motor direction B
-D7       │ L298N IN1  — left motor direction A
-D8       │ L298N IN2  — left motor direction B
-D10      │ Rocker switch (other pin → GND)
-D11      │ HC-SR04 TRIG
-D12      │ HC-SR04 ECHO
-D13      │ LED anode via 330Ω resistor → GND
-ENA      │ Jumper ON — no wire needed (full power always)
-ENB      │ Jumper ON — no wire needed (full power always)
-```
+> **Green and Dark Blue MUST be connected in all builds**, even when encoder signals are unused. A floating encoder board can generate back-EMF that blocks the motor from spinning.
 
 ---
 
-## GA25-370 Motor — All 6 Wires
+## HC-SR04 ECHO Voltage Divider (Pi + ESP32)
 
-```
-Wire Colour │ What It Is        │ Pi versions                  │ Arduino version
-────────────┼───────────────────┼──────────────────────────────┼──────────────────────
-Red         │ Motor power +     │ L298N OUT1 (L) / OUT3 (R)    │ Same
-Black       │ Motor power −     │ L298N OUT2 (L) / OUT4 (R)    │ Same
-Green       │ Encoder VCC 5V    │ MT3608 5V rail               │ Uno 5V pin
-Dark Blue   │ Encoder GND       │ Common GND rail              │ Common GND rail
-Yellow      │ Encoder Channel A │ BCM5 (L) / BCM19 (R)         │ Leave unconnected
-White       │ Encoder Channel B │ BCM6 (L) / BCM26 (R)         │ Leave unconnected
-```
-
-> Green and dark blue MUST always be connected even when encoder signals are unused.
-
----
-
-## HC-SR04 Voltage Divider (Pi versions only)
-
-The HC-SR04 ECHO pin outputs 5V. The Pi GPIO can only handle 3.3V.
-Use a resistor divider to reduce it:
+The HC-SR04 ECHO pin outputs 5V. Both Pi and ESP32 GPIO are 3.3V max.
 
 ```
 HC-SR04 ECHO (5V)
         │
        [1kΩ]
         │
-        ├──────────────────► Pi BCM25 (sees ~3.33V ✓)
+        ├──────────────► GPIO input (sees ~3.33V ✓)
         │
        [2kΩ]
         │
        GND
 
-Maths: 5V × (2kΩ ÷ (1kΩ + 2kΩ)) = 3.33V ✓
+Maths: 5V × (2000 ÷ 3000) = 3.33V ✓
 ```
 
-> The Arduino Uno is 5V logic — connect ECHO directly, no divider needed.
+> Arduino Uno/Nano are 5V logic — connect ECHO directly, no divider needed.
 
 ---
 
-## Software Architecture (Pi Autonomous Version)
+## Pin Reference
+
+### Pi Zero 2 W — BCM Assignments
 
 ```
-main.py ──── Entry point. Switch polling, LED state machine,
-    │         hardware watchdog, fixed-rate 50Hz loop.
-    │
-    ├── config.py ──── Single source of truth. Every pin, speed,
-    │                  distance, and timing constant. Edit only this.
-    │
-    ├── motors.py ──── MotorController + _Encoder (quadrature A+B).
-    │                  forward, reverse, spin_left, spin_right,
-    │                  arc_left, arc_right, stop, heading_error().
-    │
-    ├── sensors.py ─── UltrasonicSensor (4-sample median filter),
-    │                  IRSensors (active-LOW edge detection),
-    │                  OpponentTracker (confidence 0–1, bearing estimate).
-    │
-    └── strategy.py ── SumoFSM (7 states), TacticAdaptor (RUSHER /
-                       STALKER / FLANKER), _ScanTracker (360° coverage).
+BCM Pin │ Physical │ Connected To
+────────┼──────────┼──────────────────────────────────────────────────
+BCM 17  │ Pin 11   │ L298N IN1   — left motor direction A
+BCM 18  │ Pin 12   │ L298N ENA   — left motor PWM speed
+BCM 27  │ Pin 13   │ L298N IN2   — left motor direction B
+BCM 22  │ Pin 15   │ L298N IN3   — right motor direction A
+BCM 23  │ Pin 16   │ L298N IN4   — right motor direction B
+BCM  5  │ Pin 29   │ Left encoder Channel A (yellow wire)
+BCM  6  │ Pin 31   │ Left encoder Channel B (white wire)
+BCM 13  │ Pin 33   │ L298N ENB   — right motor PWM speed
+BCM 19  │ Pin 35   │ Right encoder Channel A (yellow wire)
+BCM 16  │ Pin 36   │ Back IR sensor OUT
+BCM 26  │ Pin 37   │ Right encoder Channel B (white wire)
+BCM 20  │ Pin 38   │ Status LED anode (via 330Ω to GND)
+BCM 21  │ Pin 40   │ Rocker switch (other pin → GND)
+BCM 24  │ Pin 18   │ HC-SR04 TRIG
+BCM 25  │ Pin 22   │ HC-SR04 ECHO (after 1kΩ+2kΩ divider)
+BCM 12  │ Pin 32   │ Front IR sensor OUT
 ```
 
-### FSM States (highest → lowest priority)
+### Arduino Uno — Pin Assignments
 
 ```
-1. EDGE_AVOID  — white line detected → reverse + spin away (always wins)
-2. RAM         — opponent < 25cm → full-speed burst push
-3. ATTACK      — opponent < 80cm → charge with encoder heading correction
-4. STALK       — opponent 80–150cm → arc toward estimated bearing
-5. ORBIT       — FLANKER tactic only → wide arc to approach from side
-6. SEARCH      — nothing detected → spin-scan, reverses direction each 360°
-7. START       — mandatory 5-second pre-match pause (lowest priority)
+Uno Pin │ Connected To
+────────┼──────────────────────────────────────────────────
+5V      │ L298N "5V" Screw Terminal (power IN)
+GND     │ Common GND rail
+D4      │ L298N IN3  — right motor direction A
+D5      │ L298N IN4  — right motor direction B
+D7      │ L298N IN1  — left motor direction A
+D8      │ L298N IN2  — left motor direction B
+D11     │ HC-SR04 TRIG
+D12     │ HC-SR04 ECHO (5V direct — Uno is 5V logic)
+A0      │ Front IR sensor OUT (active LOW)
+A1      │ Back IR sensor OUT  (active LOW)
+D2      │ Rocker switch (other pin → GND)
+D13     │ Status LED anode (via 330Ω to GND)
+ENA     │ Jumper ON — no wire to Arduino needed
+ENB     │ Jumper ON — no wire to Arduino needed
 ```
 
-### Adaptive Tactic System
+### Arduino Nano — Pin Assignments
 
-| Tactic | Behaviour | Triggered When |
-|--------|-----------|----------------|
-| RUSHER | Charge immediately at full speed | Default. Also if 2+ direct charges succeeded |
-| STALKER | Careful curved approach | If pushed to edge |
-| FLANKER | Wide orbit then side attack | If pushed to edge 3+ times |
-| RUSHER (forced) | Ignore everything, charge | Final 30 seconds of match |
+```
+Nano Pin │ Connected To
+─────────┼──────────────────────────────────────────────────
+5V       │ L298N "5V" Screw Terminal (power IN)
+GND      │ Common GND rail
+D4       │ L298N IN3  — right motor direction A
+D5       │ L298N IN4  — right motor direction B
+D7       │ L298N IN1  — left motor direction A
+D8       │ L298N IN2  — left motor direction B
+D9       │ HC-SR04 TRIG
+D10      │ HC-SR04 ECHO (5V direct — Nano is 5V logic)
+A0       │ Front IR sensor OUT (active LOW)
+A1       │ Back IR sensor OUT  (active LOW)
+D2       │ Rocker switch (other pin → GND)
+D13      │ Status LED anode (via 330Ω to GND)
+ENA      │ Jumper ON — no wire to Nano needed
+ENB      │ Jumper ON — no wire to Nano needed
+```
+
+### ESP32 — GPIO Assignments
+
+```
+GPIO    │ Connected To
+────────┼──────────────────────────────────────────────────
+VIN     │ L298N "5V" Screw Terminal (power IN to onboard LDO)
+GND     │ Common GND rail
+GPIO27  │ L298N IN1  — left motor direction A
+GPIO26  │ L298N IN2  — left motor direction B
+GPIO14  │ L298N ENA  — left motor PWM  (LEDC Channel 0)
+GPIO25  │ L298N IN3  — right motor direction A
+GPIO33  │ L298N IN4  — right motor direction B
+GPIO32  │ L298N ENB  — right motor PWM  (LEDC Channel 1)
+GPIO18  │ HC-SR04 TRIG (3.3V direct)
+GPIO19  │ HC-SR04 ECHO (via 1kΩ+2kΩ divider → 3.33V)
+GPIO4   │ Front IR sensor OUT (active LOW)
+GPIO16  │ Back IR sensor OUT  (active LOW)
+GPIO13  │ Rocker switch (other pin → GND; has internal pull-up)
+GPIO2   │ Status LED anode (via 330Ω to GND; mirrors built-in LED)
+ENA     │ Jumper REMOVED — PWM via GPIO14
+ENB     │ Jumper REMOVED — PWM via GPIO32
+```
 
 ---
 
-## Software Architecture (Arduino Autonomous Version)
+## Strategy Overview
+
+### Pi Autonomous — Priority FSM
 
 ```
-arduino_autonomous.ino ── Main sketch. 9 labelled sections.
-                           2-minute timed technique dispatch.
-config.h ──────────────── All pins and constants. Edit only this.
-motors.h / motors.cpp ──── 7 movement functions (no PWM — jumpers ON).
+Priority │ State       │ Condition                        │ Action
+─────────┼─────────────┼──────────────────────────────────┼──────────────────────────
+1 (high) │ EDGE_AVOID  │ IR sensor sees white line        │ Reverse + spin away
+2        │ RAM         │ Opponent < 25cm                  │ Full-speed burst push
+3        │ ATTACK      │ Opponent < 80cm                  │ Charge with heading fix
+4        │ STALK       │ Opponent 80–150cm                │ Arc toward bearing
+5        │ ORBIT       │ FLANKER tactic active            │ Wide arc around opponent
+6        │ SEARCH      │ Nothing detected                 │ Spin-scan 360° then reverse
+7 (low)  │ START       │ First 5 seconds after switch ON  │ Sit still (competition rule)
 ```
 
-### 2-Minute Technique Timeline
+### ESP32 / Uno / Nano — 2-Minute Technique Timeline
 
-| Time | Phase | Strategy |
-|------|-------|---------|
-| 0:00–0:30 | MATADOR | Bait charge, dodge sideways, counter from the side |
-| 0:30–1:00 | BULLDOZER | Wander ring pattern, charge anything found |
-| 1:00–1:30 | FLANKER | Arc wide around opponent, slam into side |
-| 1:30–2:00 | BERSERKER | Fake retreat then charge, unpredictable aggression |
+| Phase | Time | Name | Strategy |
+|-------|------|------|----------|
+| 1 | 0:00–0:30 | **Matador** | Bait the charge, sideways dodge, counter from the flank |
+| 2 | 0:30–1:00 | **Bulldozer** | Sweep ring in a search pattern, full-speed ram on contact |
+| 3 | 1:00–1:30 | **Flanker** | Arc wide around opponent, slam into exposed side |
+| 4 | 1:30–2:00 | **Berserker** | Fake retreat then charge every 3rd attack — unpredictable |
 
----
-
-## 3D Chassis (Sumo_Robot_V2_3D_files/)
-
-Box-style chassis designed in OpenSCAD. Target envelope: 194 × 184 × 86mm.
-
-| File | Description |
-|------|-------------|
-| `Sumo_Box_Concept_v2.scad` | Parametric source — edit this to change dimensions |
-| `Sumo_Box_Chassis_v2.stl` | Main enclosure body |
-| `Sumo_Box_Lid_v2.stl` | Removable lid with 6× M3 fastener positions |
-| `Sumo_Electronics_Tray_v2.stl` | Internal electronics deck |
-| `Sumo_Front_Blade_v2.stl` | Front wedge — print at 60–100% infill |
-
-Print in PETG, ASA, or nylon. PLA is too brittle for impact.
-See `Sumo_Robot_V2_3D_files/README_Sumo_Box_v2.md` for full print settings.
+Edge avoidance (IR sensors) always interrupts any phase — it is always the top priority.
 
 ---
 
 ## Quick Start
 
-### Pi Autonomous Version
+### Pi Autonomous
 
 ```bash
-# 1. Flash Raspberry Pi OS Lite (64-bit) using Raspberry Pi Imager
-# 2. SSH into the Pi, then:
+# One-time Pi setup
+bash pi_autonomous/setup_pi.sh && sudo reboot
 
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y python3-pip python3-venv git
-
-git clone https://github.com/<your-username>/sumo-robot.git
-cd sumo-robot
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install RPi.GPIO
-
-# One-time Pi setup (watchdog, performance governor, no-sleep)
-bash pi_autonomous/setup_pi.sh
-sudo reboot
+# Run manually
+cd pi_autonomous && source ../.venv/bin/activate && python main.py
 ```
 
-After reboot:
-```bash
-cd sumo-robot && source .venv/bin/activate
-python pi_autonomous/main.py
-```
+### Arduino Uno / Nano
 
-### Auto-start on Power-Up (systemd)
+1. Open `arduino_uno/arduino_uno.ino` or `arduino_nano/arduino_nano.ino` in Arduino IDE
+2. Select the correct board under **Tools → Board**
+3. For Nano clones: **Tools → Processor → ATmega328P (Old Bootloader)**
+4. Click **Upload**
 
-```bash
-sudo nano /etc/systemd/system/sumo.service
-```
+### ESP32
 
-```ini
-[Unit]
-Description=Sumo Robot
-After=multi-user.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/sumo-robot/pi_autonomous
-ExecStart=/home/pi/sumo-robot/.venv/bin/python main.py
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable sumo.service
-sudo systemctl start  sumo.service
-sudo journalctl -u sumo.service -f   # watch live logs
-```
-
-### Arduino Autonomous Version
-
-1. Open `arduino_autonomous/arduino_autonomous.ino` in Arduino IDE 2
-2. Select **Tools → Board → Arduino Uno**
-3. Select the correct COM port
-4. Click Upload
-
-See `arduino_autonomous/README.md` for full wiring and tuning guide.
-
-### Manual Control Version
-
-See `manual_control/README.md` for full Bluetooth pairing and driving guide.
-
-### Docs
-
-See `docs/DEVLOG.md` for the full Terra Hack Club development log.
-See `docs/` for competition rulebook and handbook PDFs.
+1. Add ESP32 board URL in Arduino IDE Preferences
+2. Install **esp32 by Espressif Systems** from Boards Manager
+3. Open `esp32/esp32_sumo.ino`
+4. Select **Tools → Board → ESP32 Dev Module**
+5. Click **Upload** (hold BOOT button if board lacks auto-reset)
 
 ---
 
-## LED Status Reference (all versions)
+## LED Status Reference
 
 | LED State | Meaning |
 |-----------|---------|
-| OFF | Switch is OFF — safe to handle |
-| SLOW BLINK (200ms/800ms) | Waiting for switch to be turned ON |
-| FAST BLINK (100ms/100ms) | Start delay counting down |
-| SOLID ON | Robot is active and competing |
-
----
-
-## Tuning
-
-All tuning is done by editing the config file for your version:
-- Pi autonomous: `pi_autonomous/config.py`
-- Manual control: `manual_control/config.py`
-- Arduino version: `arduino_autonomous/config.h`
-
-Never hardcode numbers in any other file.
+| **OFF** | Switch is OFF — safe to handle |
+| **Slow blink** (200ms on / 800ms off) | Waiting for switch ON |
+| **Fast blink** (100ms on / 100ms off) | 5-second pre-match countdown |
+| **Solid ON** | Robot is active and competing |
 
 ---
 
@@ -412,14 +371,21 @@ Never hardcode numbers in any other file.
 
 | Problem | Most Likely Cause | Fix |
 |---------|------------------|-----|
-| Robot does not move | Switch not ON, or ENA/ENB jumpers wrong | Check switch, check L298N jumpers |
-| One motor goes backward | Motor wires reversed | Swap red/black on that motor's L298N terminals |
-| Robot spins in circles | One motor faster or reversed | Swap wires — never change code for this |
-| Pi resets when motors start | MT3608 can't supply enough current | Add 1000µF/10V cap across MT3608 VOUT+/VOUT− |
-| No opponent detection | HC-SR04 wiring wrong | Check TRIG/ECHO pins and voltage divider (Pi) |
-| Robot falls off ring | IR sensors need calibration | Adjust potentiometer on each IR sensor board |
-| SSH connection refused | Pi still booting | Wait 60 seconds, try again |
-| Code crashes in match | Check logs | `sudo journalctl -u sumo.service -f` |
+| Robot does not move at all | ENA/ENB jumpers missing, or no battery power | Check L298N jumpers (Uno/Nano); check battery voltage |
+| One motor runs backward | Motor wires reversed | Swap Red/Black in L298N OUT terminals for that motor |
+| Robot drives off ring | IR sensor not calibrated | Adjust potentiometer on each IR module until it triggers on white paper |
+| No opponent detected | ECHO wiring wrong | Pi/ESP32: check voltage divider; Uno/Nano: direct ECHO connection |
+| Pi resets when motors start | MT3608 can't deliver current spike | Add 1000µF/10V capacitor across MT3608 VOUT terminals |
+| ESP32 crashes on motor start | LDO undervoltage from current spike | Add 1000µF/16V capacitor across L298N 5V terminal and GND |
+| Nano won't upload | Clone board old bootloader | **Tools → Processor → ATmega328P (Old Bootloader)** |
+| ESP32 upload fails | No auto-reset circuit | Hold BOOT button on ESP32 when Arduino IDE shows `Connecting...` |
+
+---
+
+## Docs
+
+See [`docs/DEVLOG.md`](docs/DEVLOG.md) for the full Terra Hack Club development log.  
+See `docs/` for competition rulebook and official competition handbook PDFs.
 
 ---
 
