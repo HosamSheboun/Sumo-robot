@@ -10,35 +10,43 @@ No remote control. Once the switch is flipped, it thinks and fights entirely on 
 ```
 Sumo robot/
 │
-├── config.py              ← Pi autonomous: all BCM pins and tuning constants
-├── main.py                ← Pi autonomous: entry point, switch, LED, watchdog
-├── motors.py              ← Pi autonomous: L298N + quadrature encoder control
-├── sensors.py             ← Pi autonomous: HC-SR04, IR sensors, OpponentTracker
-├── strategy.py            ← Pi autonomous: 7-state adaptive FSM + TacticAdaptor
-├── setup_pi.sh            ← One-time Pi setup: watchdog, performance governor, no-sleep
-├── README.md              ← This file
+├── README.md                    ← This file — master overview of the whole project
 │
-├── arduino_autonomous/    ← Standalone Arduino Uno version (no Pi needed)
-│   ├── arduino_autonomous.ino  ← Main sketch: 2-minute technique timeline
-│   ├── config.h                ← All pins and timing constants
-│   ├── motors.h / motors.cpp   ← L298N motor control (7 movement functions)
-│   └── README.md               ← Full wiring guide and tuning reference
+├── pi_autonomous/               ← Raspberry Pi Zero 2 W autonomous version
+│   ├── config.py                ← All BCM pins and tuning constants
+│   ├── main.py                  ← Entry point, switch, LED, watchdog, 50Hz loop
+│   ├── motors.py                ← L298N + quadrature encoder control
+│   ├── sensors.py               ← HC-SR04, IR sensors, OpponentTracker
+│   ├── strategy.py              ← 7-state adaptive FSM + TacticAdaptor
+│   ├── setup_pi.sh              ← One-time Pi setup script
+│   └── README.md                ← Full wiring, FSM explanation, tuning guide
 │
-├── manual_control/        ← Standalone Pi manual drive via Dabble Bluetooth app
-│   ├── main.py            ← Entry point: switch, LED, joystick loop
-│   ├── motors.py          ← L298N + encoder control with tank-mix
-│   ├── bluetooth.py       ← Dabble SPP packet parser, RFCOMM socket server
-│   ├── config.py          ← Pins, joystick settings, BT name
-│   └── README.md          ← Pairing guide, driving controls, systemd setup
+├── arduino_autonomous/          ← Standalone Arduino Uno version (no Pi needed)
+│   ├── arduino_autonomous.ino   ← Main sketch: 2-minute technique timeline
+│   ├── config.h                 ← All pins and timing constants
+│   ├── motors.h / motors.cpp    ← L298N motor control (7 movement functions)
+│   └── README.md                ← Full wiring guide and tuning reference
 │
-└── Sumo_Robot_V2_3D_files/  ← 3D-printed chassis design (OpenSCAD + STL)
-    ├── Sumo_Box_Concept_v2.scad      ← Parametric source (edit this)
-    ├── Sumo_Box_Chassis_v2.stl       ← Main enclosure body
-    ├── Sumo_Box_Lid_v2.stl           ← Removable lid
-    ├── Sumo_Electronics_Tray_v2.stl  ← Internal electronics deck
-    ├── Sumo_Front_Blade_v2.stl       ← Front wedge/blade
-    ├── README_Sumo_Box_v2.md         ← Print settings, assembly notes
-    └── *.png                         ← Render previews
+├── manual_control/              ← Standalone Pi manual drive via Dabble Bluetooth
+│   ├── main.py                  ← Entry point: switch, LED, joystick loop
+│   ├── motors.py                ← L298N + encoder control with tank-mix
+│   ├── bluetooth.py             ← Dabble SPP packet parser, RFCOMM socket server
+│   ├── config.py                ← Pins, joystick settings, BT name
+│   └── README.md                ← Pairing guide, driving controls, systemd setup
+│
+├── Sumo_Robot_V2_3D_files/      ← 3D-printed chassis design (OpenSCAD + STL)
+│   ├── Sumo_Box_Concept_v2.scad ← Parametric source (edit this)
+│   ├── Sumo_Box_Chassis_v2.stl  ← Main enclosure body
+│   ├── Sumo_Box_Lid_v2.stl      ← Removable lid
+│   ├── Sumo_Electronics_Tray_v2.stl ← Internal electronics deck
+│   ├── Sumo_Front_Blade_v2.stl  ← Front wedge/blade
+│   ├── README_Sumo_Box_v2.md    ← Print settings, assembly notes
+│   └── *.png                    ← Render previews
+│
+└── docs/                        ← Documentation and competition reference
+    ├── DEVLOG.md                ← Full Terra Hack Club development log
+    ├── Poster_Rulebook.pdf      ← Competition poster and rulebook
+    └── Sumo Robot Competition Handbook V1.pdf ← Full competition handbook
 ```
 
 ---
@@ -47,7 +55,7 @@ Sumo robot/
 
 | Version | Controller | What It Does | When to Use |
 |---------|-----------|-------------|-------------|
-| **Pi Autonomous** (root folder) | Raspberry Pi Zero 2 W | Full 7-state adaptive FSM, encoder feedback, opponent tracking, edge avoidance | Competition — most capable |
+| **Pi Autonomous** (`pi_autonomous/`) | Raspberry Pi Zero 2 W | Full 7-state adaptive FSM, encoder feedback, opponent tracking, edge avoidance | Competition — most capable |
 | **Arduino Autonomous** (`arduino_autonomous/`) | Arduino Uno | 2-minute technique timeline: Matador → Bulldozer → Flanker → Berserker | Simpler build, no Pi needed |
 | **Manual Control** (`manual_control/`) | Raspberry Pi Zero 2 W | Drive with Dabble Bluetooth joystick app on your phone | Testing, demos, practice |
 
@@ -295,7 +303,7 @@ Box-style chassis designed in OpenSCAD. Target envelope: 194 × 184 × 86mm.
 | `Sumo_Front_Blade_v2.stl` | Front wedge — print at 60–100% infill |
 
 Print in PETG, ASA, or nylon. PLA is too brittle for impact.
-See `README_Sumo_Box_v2.md` for full print settings and assembly notes.
+See `Sumo_Robot_V2_3D_files/README_Sumo_Box_v2.md` for full print settings.
 
 ---
 
@@ -318,14 +326,14 @@ source .venv/bin/activate
 pip install RPi.GPIO
 
 # One-time Pi setup (watchdog, performance governor, no-sleep)
-bash setup_pi.sh
+bash pi_autonomous/setup_pi.sh
 sudo reboot
 ```
 
 After reboot:
 ```bash
 cd sumo-robot && source .venv/bin/activate
-python main.py
+python pi_autonomous/main.py
 ```
 
 ### Auto-start on Power-Up (systemd)
@@ -342,7 +350,7 @@ After=multi-user.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/sumo-robot
+WorkingDirectory=/home/pi/sumo-robot/pi_autonomous
 ExecStart=/home/pi/sumo-robot/.venv/bin/python main.py
 Restart=on-failure
 RestartSec=3
@@ -367,6 +375,15 @@ sudo journalctl -u sumo.service -f   # watch live logs
 
 See `arduino_autonomous/README.md` for full wiring and tuning guide.
 
+### Manual Control Version
+
+See `manual_control/README.md` for full Bluetooth pairing and driving guide.
+
+### Docs
+
+See `docs/DEVLOG.md` for the full Terra Hack Club development log.
+See `docs/` for competition rulebook and handbook PDFs.
+
 ---
 
 ## LED Status Reference (all versions)
@@ -383,7 +400,8 @@ See `arduino_autonomous/README.md` for full wiring and tuning guide.
 ## Tuning
 
 All tuning is done by editing the config file for your version:
-- Pi versions: `config.py` in the root folder or `manual_control/config.py`
+- Pi autonomous: `pi_autonomous/config.py`
+- Manual control: `manual_control/config.py`
 - Arduino version: `arduino_autonomous/config.h`
 
 Never hardcode numbers in any other file.
