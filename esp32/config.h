@@ -52,7 +52,8 @@
 #define IR_BACK    16   // GPIO16 → Back  IR sensor OUT
 
 // ── Rocker Switch ─────────────────────────────────────────────────────────────
-#define SWITCH_PIN 34   // GPIO34 → rocker switch (input-only pin, other pin → GND)
+// GPIO13 has internal pull-up (unlike GPI 34-39 which are input-only without pull-ups)
+#define SWITCH_PIN 13   // GPIO13 → rocker switch (other pin → GND)
 
 // ── Status LED ────────────────────────────────────────────────────────────────
 #define LED_PIN     2   // GPIO2  → LED anode via 330Ω → GND (also ESP32 built-in LED)
