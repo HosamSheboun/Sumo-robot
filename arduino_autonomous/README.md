@@ -1,14 +1,10 @@
-# Arduino Uno Sumo Robot — Spin Search + Ultrasonic Attack
+# Arduino Uno Sumo Robot — 2-Minute Technique System
 
-This folder contains the Arduino Uno code for the sumo robot.
+This folder contains the complete Arduino Uno code for the autonomous sumo robot.
 
-**Behaviour:**
-- Flip the rocker switch ON
-- Robot waits 5 seconds (mandatory competition start delay)
-- Robot spins in place to scan for the opponent
-- When the ultrasonic sensor detects something within 80cm — charge at full speed
-- If the opponent disappears — go back to spinning and searching
-- Flip the switch OFF at any time to stop instantly
+The robot uses a **timed technique system** — it automatically switches fighting
+style every 30 seconds throughout the 2-minute match. Each phase is designed to
+beat a different type of opponent.
 
 ---
 
@@ -18,11 +14,11 @@ This folder contains the Arduino Uno code for the sumo robot.
 2. [How the Power Works](#2-how-the-power-works)
 3. [Complete Wiring Guide](#3-complete-wiring-guide)
 4. [The Rocker Switch and LED](#4-the-rocker-switch-and-led)
-5. [How the Strategy Works](#5-how-the-strategy-works)
-6. [What the Code Files Do](#6-what-the-code-files-do)
+5. [The 2-Minute Technique System](#5-the-2-minute-technique-system)
+6. [What Each Code File Does](#6-what-each-code-file-does)
 7. [Installing Arduino IDE and Uploading](#7-installing-arduino-ide-and-uploading)
 8. [Testing Before a Match](#8-testing-before-a-match)
-9. [Tuning](#9-tuning)
+9. [Tuning Guide](#9-tuning-guide)
 10. [Troubleshooting](#10-troubleshooting)
 
 ---
@@ -43,8 +39,8 @@ This folder contains the Arduino Uno code for the sumo robot.
 | 10 | LED (any colour, 3mm or 5mm) | 1 | Status indicator |
 | 11 | 330Ω resistor | 1 | Protects the LED from burning out |
 
-> No MT3608 converter needed. No IR sensors needed. No resistor divider needed for the HC-SR04
-> because the Arduino Uno runs at 5V logic — same as the sensor.
+> No MT3608 converter needed. No IR sensors needed. No resistor divider needed
+> for the HC-SR04 — the Arduino Uno is 5V logic, same as the sensor.
 
 ---
 
@@ -54,13 +50,13 @@ This folder contains the Arduino Uno code for the sumo robot.
 3× 18650 in series (~11.1V)
          │
          ├──────────────────────────► L298N 12V terminal
-         │                            └──► Both GA25-370 motors
+         │                            └──► Both GA25-370 motors (full 11.1V)
          │
          └──────────────────────────► Arduino Uno VIN pin
                                        └──► Uno onboard regulator → 5V
                                             ├──► Uno logic
                                             ├──► HC-SR04 VCC
-                                            └──► Encoder green wires (VCC)
+                                            └──► Both encoder green wires (VCC)
 
 Common GND rail:
   Battery (−) ── L298N GND ── Uno GND ── HC-SR04 GND ── Both encoder dark blue wires
@@ -68,15 +64,14 @@ Common GND rail:
 
 ### Why the Uno VIN Pin Works Here
 
-The Arduino Uno has a built-in voltage regulator on its VIN pin that
-accepts 7V to 12V and outputs a clean 5V. Your 11.1V battery pack is
-within this range so no extra converter is needed.
+The Arduino Uno has a built-in voltage regulator on its VIN pin that accepts
+7V to 12V and outputs a clean 5V. Your 11.1V battery pack is within this range.
 
 > ⚠️ Connect the battery to the **VIN pin** only — never to the 5V pin.
 > The 5V pin bypasses the regulator and will instantly destroy the Uno.
 
-> ⚠️ The Uno's onboard regulator may get warm under load. This is normal.
-> If it gets very hot, use a separate LM2596 buck converter for 5V instead.
+> ⚠️ The Uno's onboard regulator will get warm under load. This is normal.
+> If it gets very hot, use a separate LM2596 buck converter set to 7–8V into VIN.
 
 ---
 
@@ -86,23 +81,22 @@ within this range so no extra converter is needed.
 
 ```
 Uno Pin  │ Connected To
-─────────┼──────────────────────────────────────────────────────
+─────────┼──────────────────────────────────────────────────────────────
 VIN      │ Battery pack (+) ~11.1V
 GND      │ Common GND rail
 5V       │ HC-SR04 VCC + both encoder green wires
-D3  (~)  │ L298N ENB  (Right motor PWM speed)
-D4       │ L298N IN3  (Right motor direction A)
-D5       │ L298N IN4  (Right motor direction B)
-D7       │ L298N IN1  (Left motor direction A)
-D8       │ L298N IN2  (Left motor direction B)
-D9  (~)  │ L298N ENA  (Left motor PWM speed)
+D4       │ L298N IN3  (right motor direction bit A)
+D5       │ L298N IN4  (right motor direction bit B)
+D7       │ L298N IN1  (left motor direction bit A)
+D8       │ L298N IN2  (left motor direction bit B)
 D10      │ Rocker switch (other pin → GND)
 D11      │ HC-SR04 TRIG
 D12      │ HC-SR04 ECHO
-D13      │ LED anode via 330Ω resistor → GND (also lights the Uno built-in LED)
+D13      │ LED anode via 330Ω resistor → GND
 ```
 
-> (~) means the pin is PWM-capable. ENA and ENB must use PWM pins or speed control will not work.
+> D3, D6, D9 are now free — ENA and ENB jumpers on the L298N are ON,
+> so no PWM pins are needed for motor speed control.
 
 ### HC-SR04 Ultrasonic Sensor
 
@@ -110,23 +104,20 @@ Mount the sensor at the front of the robot, facing forward.
 
 ```
 HC-SR04 Pin │ Connected To
-────────────┼──────────────────────────────────────────────────
+────────────┼──────────────────────────────────────────────────────────
 VCC         │ Uno 5V
 GND         │ Common GND rail
 TRIG        │ Uno D11
 ECHO        │ Uno D12
 ```
 
-> No resistor divider needed. The Arduino Uno runs at 5V logic —
-> same as the HC-SR04 — so you connect ECHO directly.
+> No resistor divider needed. Uno and HC-SR04 are both 5V logic.
 
 ### GA25-370 Motor — All 6 Wires
 
-Each motor has 6 wires. Here is exactly where each one goes:
-
 ```
 Wire Colour │ What It Is        │ Where It Goes
-────────────┼───────────────────┼──────────────────────────────────────
+────────────┼───────────────────┼────────────────────────────────────────
 Red         │ Motor power +     │ L298N OUT1 (left) / OUT3 (right)
 Black       │ Motor power −     │ L298N OUT2 (left) / OUT4 (right)
 Green       │ Encoder VCC 5V    │ Uno 5V pin
@@ -135,32 +126,30 @@ Yellow      │ Encoder Channel A │ Leave unconnected (not used)
 White       │ Encoder Channel B │ Leave unconnected (not used)
 ```
 
-> The green and dark blue encoder wires MUST still be connected to 5V
-> and GND even though the encoder signals are not used. If you leave
-> them floating the encoder board may draw unpredictable current and
-> cause noise on the power rail.
+> Green and dark blue MUST be connected even though the encoder signals
+> are unused. If left floating, the encoder board can cause power rail noise.
 
 ### L298N Motor Driver — All Terminals
 
 ```
-L298N Terminal │ Connected To                     │ Why
-───────────────┼──────────────────────────────────┼──────────────────────
-12V            │ Battery pack (+) ~11.1V           │ Power for the motors
-GND            │ Common GND rail                   │ Ground reference
-5V output      │ NOT USED — leave unconnected      │ Too noisy for logic
-IN1            │ Uno D7                            │ Left motor direction A
-IN2            │ Uno D8                            │ Left motor direction B
-IN3            │ Uno D4                            │ Right motor direction A
-IN4            │ Uno D5                            │ Right motor direction B
-ENA            │ Uno D9  (REMOVE the ENA jumper)   │ Left motor PWM speed
-ENB            │ Uno D3  (REMOVE the ENB jumper)   │ Right motor PWM speed
-OUT1 / OUT2    │ Left  motor red / black wires     │ Power to left motor
-OUT3 / OUT4    │ Right motor red / black wires     │ Power to right motor
+L298N Terminal │ Connected To                      │ Notes
+───────────────┼───────────────────────────────────┼──────────────────────────
+12V            │ Battery pack (+) ~11.1V            │ Motor power supply
+GND            │ Common GND rail                    │ Ground reference
+5V output      │ NOT USED — leave unconnected       │ Too noisy for logic
+IN1            │ Uno D7                             │ Left motor direction A
+IN2            │ Uno D8                             │ Left motor direction B
+IN3            │ Uno D4                             │ Right motor direction A
+IN4            │ Uno D5                             │ Right motor direction B
+ENA            │ JUMPER ON — no wire needed         │ Left motor always enabled
+ENB            │ JUMPER ON — no wire needed         │ Right motor always enabled
+OUT1 / OUT2    │ Left motor red / black wires       │ Power to left motor
+OUT3 / OUT4    │ Right motor red / black wires      │ Power to right motor
 ```
 
-> ⚠️ REMOVE the two small yellow jumpers on ENA and ENB from the L298N
-> board before wiring. If you leave them in, the motors always run at
-> full speed and the Uno cannot control them at all.
+> ⚠️ The ENA and ENB jumpers must be **ON** (installed) for this build.
+> This permanently enables both motors at full power.
+> If you previously removed them for PWM control, put them back in now.
 
 ### Rocker Switch
 
@@ -168,19 +157,13 @@ OUT3 / OUT4    │ Right motor red / black wires     │ Power to right motor
 Uno D10 ──── [ROCKER SWITCH] ──── GND
 ```
 
-One pin of the switch goes to D10. The other pin goes to GND.
-No resistors needed — the Uno has an internal pull-up.
-
 ### LED
 
 ```
 Uno D13 ──── 330Ω resistor ──── LED (+) long leg ──── LED (−) short leg ──── GND
 ```
 
-The 330Ω resistor MUST be in series with the LED or it will burn out instantly.
-
-> D13 also drives the Uno's built-in LED on the board, so you can test the LED behaviour
-> without wiring an external LED at all.
+> D13 also drives the Uno's built-in LED — you can test without an external LED.
 
 ---
 
@@ -190,56 +173,120 @@ The 330Ω resistor MUST be in series with the LED or it will burn out instantly.
 |-----------|---------------|
 | OFF | Switch is OFF — robot is safe to handle |
 | SLOW BLINK (200ms on / 800ms off) | Waiting for switch to be turned ON |
-| FAST BLINK (100ms on / 100ms off) | Switch is ON — 5-second countdown |
-| SOLID ON | Robot is armed and actively searching / attacking |
+| FAST BLINK (100ms on / 100ms off) | Start delay counting down |
+| SOLID ON | Robot is active and competing |
 
 ### Step-by-Step at a Competition
 
 1. Place the robot on the ring — keep your hand on it
 2. Flip the rocker switch to ON
-3. LED blinks fast for 5 seconds — mandatory countdown
+3. LED blinks fast — start delay counting down
 4. When LED goes solid ON — release the robot immediately
-5. Robot begins spinning to search for the opponent
-6. When it finds the opponent it charges at full speed
-7. Flip switch OFF at any time to stop instantly
-8. Flip switch back ON to restart the 5-second delay and go again
+5. Robot begins Phase 1 (Matador) automatically
+6. Flip switch OFF at any time to stop instantly
+7. Flip switch back ON to restart from Phase 1 with a fresh timer
 
 ---
 
-## 5. How the Strategy Works
+## 5. The 2-Minute Technique System
 
-The robot has two modes it switches between automatically:
+The robot automatically switches fighting style every 30 seconds.
+You do not need to do anything — it changes on its own.
+
+### Phase 1 — MATADOR (0:00 – 0:30)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  SEARCH                                                 │
-│  Ultrasonic sees nothing within 80cm.                   │
-│  Robot spins right in place for 500ms, then checks      │
-│  the sensor again. Keeps spinning until it finds        │
-│  something.                                             │
-├─────────────────────────────────────────────────────────┤
-│  ATTACK                                                 │
-│  Ultrasonic detects something within 80cm.              │
-│  Robot charges forward at full speed.                   │
-│  If the opponent moves out of range, robot goes back    │
-│  to SEARCH immediately on the next loop.                │
-└─────────────────────────────────────────────────────────┘
+Goal: make the opponent charge at you, then dodge and hit it from the side.
+
+No opponent seen  → spin right to search
+Opponent far away → creep forward slowly to bait a charge
+Opponent charges  → sidestep right (let it run past), spin to face it,
+                    slam into its side at full speed
+Opponent close
+but not charging  → attack directly
+
+After 4 successful dodges, switches to direct attacks for the rest of this phase.
 ```
 
-The sensor is checked every loop. When charging, if the opponent
-disappears (pushed out, moved sideways, or sensor loses it), the robot
-automatically switches back to spinning and searching.
+This works well against aggressive bots that charge straight at you.
+You use their own momentum against them.
+
+### Phase 2 — BULLDOZER (0:30 – 1:00)
+
+```
+Goal: cover the whole ring and push anything you find.
+
+Opponent found    → charge and hold — keep pushing until it goes over the edge
+No opponent       → wander in a 6-step pattern to cover the ring:
+                    forward → spin right → forward → spin left → forward → spin right
+                    (repeats)
+```
+
+This works well against passive bots that sit still or hide near the edge.
+The wander pattern ensures the robot covers the whole ring instead of
+spinning in one spot.
+
+### Phase 3 — FLANKER (1:00 – 1:30)
+
+```
+Goal: approach from the side instead of head-on.
+
+No opponent seen  → spin right to search
+Opponent visible  → arc wide to the right around the opponent,
+                    re-read the sensor after the arc,
+                    if opponent still there → slam into its side
+Opponent far away → drive forward to close the gap
+```
+
+This works well against strong bots with powerful front pushers.
+Hitting the side bypasses their strongest pushing direction.
+
+### Phase 4 — BERSERKER (1:30 – 2:00)
+
+```
+Goal: pure aggression with unpredictability. Last 30 seconds — no time for subtlety.
+
+No opponent seen  → spin right to search
+Opponent found    → every 3rd attack: reverse briefly then charge immediately
+                    (fake retreat — confuses bots that try to dodge or counter)
+                    other attacks: direct full-speed charge
+Opponent far away → drive forward fast to close the gap
+```
+
+This works well against any opponent. The fake retreat tricks bots that
+react to your movement — they start to move away and you charge into them.
 
 ---
 
-## 6. What the Code Files Do
+## 6. What Each Code File Does
 
 ```
-arduino_autonomous.ino  ← Main sketch. Switch, LED, 5-second delay, search/attack loop.
-config.h                ← All pin numbers and constants. Edit only this file to tune.
-motors.h                ← Motor function declarations.
-motors.cpp              ← L298N motor control — forward, spin left, spin right, stop.
+arduino_autonomous.ino  ← Main sketch. All strategy logic lives here.
+                          Organised into 9 clearly labelled sections.
+
+config.h                ← Every pin number, distance threshold, and timing
+                          constant. This is the ONLY file you edit to tune
+                          the robot. Nothing is hardcoded in other files.
+
+motors.h                ← Declarations for all 7 motor functions.
+
+motors.cpp              ← L298N implementation:
+                          motorForward, motorReverse, motorSpinLeft,
+                          motorSpinRight, motorArcLeft, motorArcRight,
+                          motorStop.
 ```
+
+### The 7 Motor Movements
+
+| Function | Left Wheel | Right Wheel | Result |
+|----------|-----------|-------------|--------|
+| motorForward() | Forward | Forward | Drive straight ahead |
+| motorReverse() | Backward | Backward | Drive straight back |
+| motorSpinLeft() | Backward | Forward | Pivot left in place |
+| motorSpinRight() | Forward | Backward | Pivot right in place |
+| motorArcLeft() | Stop | Forward | Curve left (wide turn) |
+| motorArcRight() | Forward | Stop | Curve right (wide turn) |
+| motorStop() | Stop | Stop | Coast to a halt |
 
 ---
 
@@ -251,77 +298,127 @@ motors.cpp              ← L298N motor control — forward, spin left, spin rig
 2. Download **Arduino IDE 2** for your operating system
 3. Install it
 
-### Step 2 — Connect the Uno to Your Laptop
+### Step 2 — Connect the Uno
 
-Plug the Arduino Uno into your laptop using a **USB Type-B cable** (the square-ish connector).
+Plug the Arduino Uno into your laptop using a **USB Type-B cable**
+(the square-ish connector, not Micro-USB).
 
-> Some cheap USB cables are charge-only and carry no data.
-> If the Uno does not appear in the port list, try a different cable.
+> If the Uno does not appear in the port list, try a different cable —
+> some cheap cables carry power only and no data.
 
 ### Step 3 — Configure Arduino IDE
 
 1. Open Arduino IDE
 2. Go to **Tools → Board → Arduino AVR Boards → Arduino Uno**
-3. Go to **Tools → Port** → select the port that appeared (e.g. COM3 on Windows)
+3. Go to **Tools → Port** → select the COM port that appeared
 
-### Step 4 — Open the Project
+### Step 4 — Open and Upload
 
 1. Go to **File → Open**
 2. Navigate to the `arduino_autonomous` folder
 3. Open `arduino_autonomous.ino`
-4. Arduino IDE will automatically load config.h, motors.h, and motors.cpp
+4. Arduino IDE automatically loads config.h, motors.h, and motors.cpp
+5. Click the **Upload** button (→) or press **Ctrl+U**
+6. Wait for "Done uploading"
 
-### Step 5 — Upload
-
-1. Click the **Upload** button (→ arrow) or press **Ctrl+U**
-2. Wait for "Done uploading" at the bottom of the screen
-3. The Uno restarts automatically and runs the code immediately
-
-> If upload fails, try a different USB cable or check the correct COM port is selected.
+> If upload fails, try a different USB cable or check the correct port is selected.
 
 ---
 
 ## 8. Testing Before a Match
 
+Always test each part separately before competing.
+
 ### Test 1 — Switch and LED
 
-1. Power on the robot
-2. LED should blink slowly — waiting for switch
-3. Flip switch ON — LED blinks fast for 5 seconds
-4. LED goes solid ON — robot starts spinning
-5. Flip switch OFF — robot stops, LED goes off
+1. Power on the robot (connect battery)
+2. LED blinks slowly — waiting for switch
+3. Flip switch ON — LED blinks fast for 1 second (or 5 seconds for competition)
+4. LED goes solid ON — robot is now active
+5. Flip switch OFF — LED goes off, motors stop immediately
 
-### Test 2 — Ultrasonic Sensor
+### Test 2 — Motors (lift robot off ground first)
 
-1. Power on and flip switch ON, wait for LED to go solid
-2. Robot should be spinning
+1. Flip switch ON, wait for LED to go solid
+2. Robot should start spinning right (Phase 1 search behaviour)
 3. Hold your hand in front of the sensor within 80cm
-4. Robot should stop spinning and drive forward toward your hand
-5. Move your hand away — robot should go back to spinning
+4. Robot should stop spinning and start the matador sequence
+5. If a wheel spins the wrong direction — swap that motor's red and black
+   wires on the L298N output terminals (OUT1/OUT2 or OUT3/OUT4)
+6. Do NOT change any code — physical wire swap is always the correct fix
 
-### Test 3 — Motor Directions
+### Test 3 — Ultrasonic Sensor
 
-1. Lift the robot off the ground so wheels spin freely
-2. Flip switch ON and wait for LED to go solid
-3. Both wheels should spin in opposite directions during the spin search
-   (one forward, one backward — this is correct for spinning in place)
-4. Hold your hand in front — both wheels should spin forward together
-5. If a wheel spins the wrong way — swap that motor's red and black wires
-   on the L298N output terminals (OUT1/OUT2 or OUT3/OUT4)
+1. Flip switch ON, wait for LED to go solid
+2. Robot spins — hold your hand in front within 80cm
+3. Robot should react (stop spinning, start matador sequence)
+4. Move hand away — robot should go back to spinning
+5. If no reaction: check TRIG on D11 and ECHO on D12, check HC-SR04 VCC on Uno 5V
+
+### Test 4 — All 7 Motor Movements
+
+Lift the robot off the ground. Upload this quick test sketch temporarily
+to verify every movement direction is correct:
+
+```cpp
+#include "motors.h"
+void setup() {
+    motorsInit();
+    motorForward();   delay(600); motorStop(); delay(400);
+    motorReverse();   delay(600); motorStop(); delay(400);
+    motorSpinLeft();  delay(600); motorStop(); delay(400);
+    motorSpinRight(); delay(600); motorStop(); delay(400);
+    motorArcLeft();   delay(600); motorStop(); delay(400);
+    motorArcRight();  delay(600); motorStop(); delay(400);
+}
+void loop() {}
+```
+
+Expected behaviour for each:
+- Forward: both wheels spin forward
+- Reverse: both wheels spin backward
+- SpinLeft: left wheel backward, right wheel forward
+- SpinRight: left wheel forward, right wheel backward
+- ArcLeft: left wheel stops, right wheel forward
+- ArcRight: left wheel forward, right wheel stops
 
 ---
 
-## 9. Tuning
+## 9. Tuning Guide
 
-All tuning is done by editing **config.h only**. Never change numbers in any other file.
+All tuning is done by editing **config.h only**.
 
-| Setting | Default | What Changing It Does |
-|---------|---------|----------------------|
-| `ATTACK_DIST_CM` | 80 | How close the opponent must be before charging. Increase to charge from further away |
-| `SPEED_FULL` | 255 | Attack charge speed. 255 = maximum |
-| `SPEED_SPIN` | 180 | How fast the robot spins while searching. Lower if it spins past the opponent too fast |
-| `SPIN_STEP_MS` | 500 | How long it spins before checking the sensor again. Lower for more frequent checks |
-| `START_DELAY_MS` | 5000 | Mandatory 5-second pre-match pause. Do not change for competition |
+### Sensor Thresholds
+
+| Constant | Default | What Changing It Does |
+|----------|---------|----------------------|
+| `ATTACK_DIST_CM` | 80 | Distance to trigger attack. Increase to attack from further away |
+| `NO_DETECT_CM` | 200 | Max detection range. Leave at 200 for a standard ring |
+| `CHARGE_SPEED_CM_S` | 55 | How fast opponent must close to trigger a matador dodge. Lower = dodges more easily |
+
+### Timing Constants
+
+| Constant | Default | What Changing It Does |
+|----------|---------|----------------------|
+| `START_DELAY_MS` | 1000 | Pre-match pause. Set to 5000 for competition rules |
+| `SPIN_STEP_MS` | 500 | Search spin duration. Lower if it spins past the opponent |
+| `MATADOR_SIDESTEP_MS` | 380 | How far the robot sidesteps during a dodge |
+| `MATADOR_REFACE_MS` | 280 | How long it spins to face the opponent after dodging |
+| `MATADOR_SLAM_MS` | 550 | How long the counter-attack charge lasts |
+| `MATADOR_BAIT_MS` | 200 | How long it creeps forward to bait a charge |
+| `MATADOR_MAX_DODGES` | 4 | Max dodges before switching to direct attacks |
+| `FLANKER_ARC_MS` | 600 | How wide the flanker arc is. Increase for a wider approach angle |
+| `FLANKER_SLAM_MS` | 500 | How long the flanker slam lasts |
+| `BERSERKER_RETREAT_MS` | 180 | How long the fake retreat reversal lasts |
+| `BERSERKER_CHARGE_MS` | 600 | How long the charge after fake retreat lasts |
+
+### Phase Boundaries
+
+| Constant | Default | What Changing It Does |
+|----------|---------|----------------------|
+| `PHASE1_END_MS` | 30000 | When Matador ends and Bulldozer begins |
+| `PHASE2_END_MS` | 60000 | When Bulldozer ends and Flanker begins |
+| `PHASE3_END_MS` | 90000 | When Flanker ends and Berserker begins |
 
 ---
 
@@ -330,38 +427,40 @@ All tuning is done by editing **config.h only**. Never change numbers in any oth
 ### Robot does not move at all
 - Check rocker switch is ON (LED should be blinking or solid)
 - Check battery voltage — 3S pack should read ~11.1V fully charged
-- Check L298N ENA and ENB jumpers are removed
+- Check ENA and ENB **jumpers are ON** (installed) on the L298N
 - Check all GND wires share a common ground rail
-
-### Robot just drives forward and does not spin
-- Check HC-SR04 wiring — TRIG to D11, ECHO to D12
-- The sensor may be reading a false close distance on startup
-- Increase `ATTACK_DIST_CM` temporarily to confirm the sensor is working
+- Check D4, D5, D7, D8 are connected to the correct L298N IN terminals
 
 ### Robot spins but never attacks
-- Hold your hand in front of the sensor — if it still does not attack,
-  the sensor is not reading correctly
-- Check HC-SR04 VCC is connected to Uno 5V
+- Hold your hand in front of the sensor within 80cm — if no reaction:
+- Check HC-SR04 VCC is on Uno 5V (not 3.3V — Uno has no 3.3V pin anyway)
 - Check TRIG is on D11 and ECHO is on D12
-- Try increasing `ATTACK_DIST_CM` to 120 to make it trigger more easily
+- Try increasing `ATTACK_DIST_CM` to 120 in config.h
 
-### Robot spins past the opponent without attacking
-- Lower `SPIN_STEP_MS` in config.h (e.g. 200) so it checks the sensor more often
-- Lower `SPEED_SPIN` so it rotates more slowly and the sensor has more time to catch the opponent
+### Robot never dodges in Phase 1
+- The opponent may not be closing fast enough to trigger the dodge
+- Lower `CHARGE_SPEED_CM_S` in config.h (e.g. 30)
+- Make sure the sensor is getting stable readings
 
-### One motor spins backward
-- Swap the red and black wires on that motor's L298N output terminals
-- Do not change any code — physical wire swap is the correct fix
+### Robot dodges when it shouldn't
+- Raise `CHARGE_SPEED_CM_S` (e.g. 80) so it only dodges a real fast charge
+
+### One motor spins the wrong direction
+- Swap that motor's red and black wires on the L298N output terminals
+- Do not change any code — physical wire swap is always the correct fix
+
+### Robot curves instead of going straight
+- One motor is slightly stronger than the other — normal for L298N
+- Physically adjust the motor mounting or add a small shim to one wheel
 
 ### Upload fails
 - Try a different USB cable
 - Check the correct COM port is selected under Tools → Port
-- Make sure **Arduino Uno** is selected under Tools → Board (not Nano)
+- Make sure **Arduino Uno** is selected under Tools → Board
 
 ### Uno gets very hot on VIN
-- The onboard regulator is dissipating the voltage difference as heat
-- Add a small heatsink to the regulator chip on the Uno
-- Or use a separate LM2596 buck converter to supply 7–8V to VIN instead of 11.1V
+- The onboard regulator dissipates the voltage difference as heat
+- Use a separate LM2596 buck converter set to 7–8V into VIN instead of 11.1V
 
 ---
 
