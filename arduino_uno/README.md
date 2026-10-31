@@ -13,10 +13,11 @@ It features a **timed 4-phase adaptive combat timeline** (Matador → Bulldozer 
 3. [Complete Wiring Guide](#3-complete-wiring-guide)
 4. [The 2-Minute Technique System](#4-the-2-minute-technique-system)
 5. [Code Structure](#5-code-structure)
-6. [Uploading to Arduino Uno](#6-uploading-to-arduino-uno)
-7. [Pre-Match Testing Routine](#7-pre-match-testing-routine)
-8. [Tuning Guide](#8-tuning-guide)
-9. [Troubleshooting](#9-troubleshooting)
+6. [Advanced Features](#6-advanced-features)
+7. [Uploading to Arduino Uno](#7-uploading-to-arduino-uno)
+8. [Pre-Match Testing Routine](#8-pre-match-testing-routine)
+9. [Tuning Guide](#9-tuning-guide)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -142,16 +143,67 @@ At any point during any phase, if either the front (`A0`) or rear (`A1`) IR sens
 
 ```
 arduino_uno/
-├── arduino_uno.ino   # Main loop, FSM phase scheduler, sensor polling
-├── config.h          # Single source of truth: pins, thresholds, timings
-├── motors.h          # Direction control prototypes
-├── motors.cpp        # Optimized direct digital pin controls
-└── README.md         # This technical documentation
+├── arduino_uno.ino       # Main loop, FSM phase scheduler, sensor polling
+├── config.h              # Single source of truth: pins, thresholds, timings
+├── motors.h              # Direction control prototypes
+├── motors.cpp            # Optimized direct digital pin controls
+├── advanced_features.h   # Competition-grade optional techniques (disabled by default)
+├── motor_test.ino        # Standalone hardware test sketch
+└── README.md             # This technical documentation
 ```
 
 ---
 
-## 6. Uploading to Arduino Uno
+## 6. Advanced Features
+
+The `advanced_features.h` file contains **competition-grade techniques** used by top sumo robot teams. Each feature can be **individually enabled or disabled** by editing the `#define` flags at the top of that file.
+
+### How to Enable a Feature
+
+1. Open `arduino_uno/advanced_features.h` in Arduino IDE.
+2. Change the desired feature flag from `0` to `1`:
+   ```cpp
+   #define ENABLE_SENSOR_FUSION    1  // Enable this feature
+   ```
+3. Save the file and re-upload the sketch to your Arduino Uno.
+
+### Available Features
+
+| Feature | Memory Cost | When to Use |
+|---------|-------------|-------------|
+| **`ENABLE_SENSOR_FUSION`** | 0 bytes RAM | IR sensors giving false edge detections from lighting reflections or shiny ring surfaces. Uses majority-vote (5 samples) to confirm white line before triggering edge avoidance. |
+| **`ENABLE_SEARCH_MEMORY`** | 6 bytes RAM | Opponent keeps escaping during spin-search. Remembers the last direction opponent was seen and biases next search toward that direction before full 360° scan. |
+| **`ENABLE_ROLLING_SPEED`** | 12 bytes RAM | Matador dodge triggering too early or too late due to ultrasonic jitter. Uses rolling average of last 3 speed samples to smooth out noise. |
+| **`ENABLE_KICKSTART`** | 0 bytes RAM | Only useful if you remove ENA/ENB jumpers and wire them to PWM pins for speed control. Applies brief full-power pulse to overcome motor static friction. Has no effect with jumpers installed. |
+
+### Memory Budget Warning
+
+Arduino Uno has **2KB (2048 bytes) of RAM** total. With all features enabled simultaneously:
+- Core strategy code: ~1400 bytes
+- Advanced features: ~18 bytes
+- System overhead: ~400 bytes
+- **Remaining: ~230 bytes** (safe margin)
+
+### Testing Recommendation
+
+Enable one feature at a time and test on the actual competition ring surface before enabling multiple features together. Each feature solves a specific problem:
+
+- **Sensor Fusion**: Use if the robot false-triggers on shiny surfaces or camera flashes
+- **Search Memory**: Use if the robot loses and re-acquires the same opponent multiple times per match
+- **Rolling Speed**: Use if the Matador dodge fires randomly or misses real charges
+- **Kickstart**: Only for PWM builds (not jumper mode)
+
+### Research References
+
+These features are documented in real competition projects:
+- **Sensor Fusion**: Fuzzy logic control for sumo robots (Springer 2007), sumo.robojogo.com forums
+- **Search Memory**: Robot-Sumo-RL project (GitHub), Iron Reign Robotics methodology
+- **Rolling Speed**: Temporal consistency filtering (edge robotics), Arduino motor forums
+- **Kickstart**: Competition sumo builds, mini-sumo community documentation
+
+---
+
+## 7. Uploading to Arduino Uno
 
 1. Connect the Arduino Uno to your PC via a **USB Type-B cable**.
 2. Open the **Arduino IDE**.
@@ -163,7 +215,7 @@ arduino_uno/
 
 ---
 
-## 7. Pre-Match Testing Routine
+## 8. Pre-Match Testing Routine
 
 Before placing the robot in competition:
 1. **Edge Sensor Test:** Prop the robot on a block so wheels spin freely. Turn rocker switch ON. Slide a piece of white paper under the front IR sensor — the wheels must immediately spin in reverse! Slide paper under the back IR sensor — wheels must spin forward.
@@ -172,7 +224,7 @@ Before placing the robot in competition:
 
 ---
 
-## 8. Tuning Guide
+## 9. Tuning Guide
 
 All constants are conveniently located in `config.h`:
 
@@ -187,7 +239,7 @@ All constants are conveniently located in `config.h`:
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 - **Motors hum but do not turn:** Check battery voltage. If 3S pack is below 10.0V, recharge the cells. Ensure the ENA/ENB jumpers on the L298N are securely seated.
 - **Robot spins the wrong direction during forward drive:** Swap the motor wires in the L298N output terminals (swap OUT1/OUT2 for left motor, or OUT3/OUT4 for right motor).
