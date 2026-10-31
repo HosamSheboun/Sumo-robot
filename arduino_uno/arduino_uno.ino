@@ -54,10 +54,20 @@ static float readDistance() {
     return dur * 0.0343f / 2.0f;
 }
 
+// Global flag to signal match restart to getClosingSpeed()
+static bool g_needSpeedReset = false;
+
 static float getClosingSpeed(float dist) {
     static float         prev  = NO_DETECT_CM;
     static unsigned long prevT = 0;
     unsigned long now = millis();
+    
+    // Check for explicit reset request (match restart)
+    if (g_needSpeedReset) {
+        prev  = NO_DETECT_CM;
+        prevT = 0;
+        g_needSpeedReset = false;
+    }
     
     // First-call guard: initialize without calculating speed
     if (prevT == 0) {
@@ -76,6 +86,11 @@ static float getClosingSpeed(float dist) {
     prev  = dist;
     prevT = now;
     return spd;
+}
+
+// Reset getClosingSpeed() state on match restart
+static void resetClosingSpeed() {
+    g_needSpeedReset = true;
 }
 
 // =============================================================================
@@ -280,6 +295,7 @@ void loop() {
         waitForSwitch(); startDelay();
         matchStart = millis(); 
         dodgeCount = 0;
+        resetClosingSpeed();  // Reset closing speed calculation on match restart
 #if ENABLE_SEARCH_MEMORY
         resetSearchMemory();
 #endif

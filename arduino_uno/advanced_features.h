@@ -151,23 +151,26 @@ void resetSearchMemory() {
 
 #define ROLLING_SAMPLES  3  // Number of speed samples to average
 
+// Global flag to signal match restart to getRollingClosingSpeed()
+static bool g_needRollingReset = false;
+
 // Maintains a rolling average of the last N speed readings
 float getRollingClosingSpeed(float dist) {
     static float speedBuffer[ROLLING_SAMPLES] = {0, 0, 0};
     static uint8_t bufferIndex = 0;
     static float   prevDist    = NO_DETECT_CM;
     static unsigned long prevT = 0;
-    static uint32_t matchID = 0;  // Detect match restarts
     
-    // Check if match was restarted (millis() wrapped or explicit reset signal)
-    // Simple heuristic: if prevT is way in the future compared to now, we restarted
-    unsigned long now = millis();
-    if (prevT > now + 1000) {  // Time went backwards = system restarted
+    // Check for explicit reset request (match restart)
+    if (g_needRollingReset) {
         for (uint8_t i = 0; i < ROLLING_SAMPLES; i++) speedBuffer[i] = 0;
         bufferIndex = 0;
         prevDist = NO_DETECT_CM;
         prevT = 0;
+        g_needRollingReset = false;
     }
+    
+    unsigned long now = millis();
     
     // First-call guard
     if (prevT == 0) {
@@ -202,9 +205,7 @@ float getRollingClosingSpeed(float dist) {
 
 // Call this function from main sketch on match restart to clear stale data
 void resetRollingSpeed() {
-    // Force the function to detect a restart by calling with a sentinel value
-    // On next normal call, the time-went-backwards check will trigger reset
-    getRollingClosingSpeed(NO_DETECT_CM);
+    g_needRollingReset = true;
 }
 
 #endif  // ENABLE_ROLLING_SPEED
