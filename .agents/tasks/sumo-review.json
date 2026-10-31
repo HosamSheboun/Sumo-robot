@@ -1,0 +1,20 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "issue": "Match restart detection gap in getClosingSpeed()",
+      "description": "The first-call guard (prevT == 0) only handles initial startup. When the switch is toggled mid-session, loop() resets dodgeCount and calls feature reset functions, but getClosingSpeed() has no reset mechanism — its static variables persist. On the first call after restart, prevT might be 45000 (from the previous match) and millis() might be 48000 (3 seconds into the new match), producing a valid but incorrect dt = 3 seconds.",
+      "action": "Add an explicit reset function or pass a reset flag when the match restarts.",
+      "confidence": "confirmed"
+    },
+    {
+      "severity": "HIGH",
+      "issue": "Fragile rolling speed restart detection",
+      "description": "getRollingClosingSpeed() tries to detect match restarts by checking if prevT > now + 1000 (time went backwards). This only works if the Arduino restarts and millis() resets to 0, which doesn't happen when the switch is toggled — the Uno keeps running and millis() keeps counting up. The existing resetRollingSpeed() function is called from the switch restart block but it does nothing useful — it just calls getRollingClosingSpeed(NO_DETECT_CM) hoping the time-went-backwards check will fire, which it won't.",
+      "action": "Change resetRollingSpeed() to explicitly zero out the static state (add a global needsReset flag or return early on a sentinel input value).",
+      "confidence": "confirmed"
+    }
+  ],
+  "reviewDoc": "c:\\Users\\hosam\\Documents\\Python\\Raspberry pi\\Sumo robot\\.agents\\tasks\\sumo-review.md"
+}
