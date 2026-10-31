@@ -129,13 +129,22 @@ static void spinSearch() {
     } else {
         motorSpinLeft();
     }
-#else
-    // Default: always spin right
-    motorSpinRight();
-#endif
     
     delay(SPIN_STEP_MS);
     motorStop();
+    
+    // After spinning, check if we found the opponent
+    float dist = readDistance();
+    if (dist < NO_DETECT_CM) {
+        // Update memory with actual spin direction used
+        updateSearchMemory(dist, spinRight);
+    }
+#else
+    // Default: always spin right
+    motorSpinRight();
+    delay(SPIN_STEP_MS);
+    motorStop();
+#endif
 }
 
 // =============================================================================
@@ -157,20 +166,12 @@ static void runMatador(float dist, float spd) {
 
     if (dist >= NO_DETECT_CM) {
         spinSearch();
-#if ENABLE_SEARCH_MEMORY
-        // Reset search memory when opponent not detected
-        searchMem.valid = false;
-#endif
     } else if (spd > CHARGE_SPEED_CM_S && dist < ATTACK_DIST_CM
                && dodgeCount < MATADOR_MAX_DODGES) {
         matadorDodge();
         dodgeCount++;
     } else if (dist < ATTACK_DIST_CM) {
         motorForward();
-#if ENABLE_SEARCH_MEMORY
-        // Update search memory when opponent is detected and we're charging
-        updateSearchMemory(dist, true);  // true = biased right in default search
-#endif
     } else {
         motorForward(); delay(MATADOR_BAIT_MS); motorStop();
     }
@@ -277,7 +278,14 @@ void setup() {
 void loop() {
     if (!switchIsOn()) {
         waitForSwitch(); startDelay();
-        matchStart = millis(); dodgeCount = 0;
+        matchStart = millis(); 
+        dodgeCount = 0;
+#if ENABLE_SEARCH_MEMORY
+        resetSearchMemory();
+#endif
+#if ENABLE_ROLLING_SPEED
+        resetRollingSpeed();
+#endif
         return;
     }
 

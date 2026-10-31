@@ -14,11 +14,12 @@
 // =============================================================================
 
 // ── L298N Pin Definitions ─────────────────────────────────────────────────────
+// Wiring: D7 → IN1, D8 → IN2, D4 → IN3, D5 → IN4
 // ENA and ENB jumpers must be ON for motors to run.
-#define LEFT_IN1    7   // D7  → L298N IN1  (left motor direction bit A)
-#define LEFT_IN2    8   // D8  → L298N IN2  (left motor direction bit B)
-#define RIGHT_IN3   4   // D4  → L298N IN3  (right motor direction bit A)
-#define RIGHT_IN4   5   // D5  → L298N IN4  (right motor direction bit B)
+#define LEFT_IN1    7   // Left motor direction bit A
+#define LEFT_IN2    8   // Left motor direction bit B
+#define RIGHT_IN3   4   // Right motor direction bit A
+#define RIGHT_IN4   5   // Right motor direction bit B
 
 // ── Motor Control Functions ───────────────────────────────────────────────────
 void motorForward() {

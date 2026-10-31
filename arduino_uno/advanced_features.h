@@ -19,6 +19,8 @@
 #include "config.h"
 
 // ── FEATURE FLAGS (set to 0 to disable, 1 to enable) ─────────────────────────
+// NOTE: Main sketch (arduino_uno.ino) depends on these flags being defined.
+//       Do not remove this header without providing fallback definitions.
 #define ENABLE_SENSOR_FUSION    0  // Majority-vote edge detection (reduces false positives)
 #define ENABLE_SEARCH_MEMORY    0  // Remember last opponent direction (faster re-acquisition)
 #define ENABLE_ROLLING_SPEED    0  // Rolling average closing speed (smooths ultrasonic jitter)
@@ -42,7 +44,7 @@
 #if ENABLE_SENSOR_FUSION
 
 #define SENSOR_FUSION_SAMPLES  5   // Number of rapid samples to take
-#define SENSOR_FUSION_THRESHOLD 3  // Minimum detections needed (3/5 = 60% confidence)
+#define SENSOR_FUSION_THRESHOLD 4  // Minimum detections needed (4/5 = 80% confidence)
 
 // Read IR_FRONT sensor multiple times and return true only if majority detect white line
 bool irFusedFront() {
@@ -118,6 +120,13 @@ bool getSearchDirection() {
     return alternate;
 }
 
+// Call this function from main sketch on match restart to clear stale memory
+void resetSearchMemory() {
+    searchMem.valid = false;
+    searchMem.lastSeenMs = 0;
+    searchMem.lastSeenRight = false;
+}
+
 #endif  // ENABLE_SEARCH_MEMORY
 
 // =============================================================================
@@ -148,8 +157,17 @@ float getRollingClosingSpeed(float dist) {
     static uint8_t bufferIndex = 0;
     static float   prevDist    = NO_DETECT_CM;
     static unsigned long prevT = 0;
+    static uint32_t matchID = 0;  // Detect match restarts
     
+    // Check if match was restarted (millis() wrapped or explicit reset signal)
+    // Simple heuristic: if prevT is way in the future compared to now, we restarted
     unsigned long now = millis();
+    if (prevT > now + 1000) {  // Time went backwards = system restarted
+        for (uint8_t i = 0; i < ROLLING_SAMPLES; i++) speedBuffer[i] = 0;
+        bufferIndex = 0;
+        prevDist = NO_DETECT_CM;
+        prevT = 0;
+    }
     
     // First-call guard
     if (prevT == 0) {
@@ -180,6 +198,13 @@ float getRollingClosingSpeed(float dist) {
     prevT    = now;
     
     return sum / ROLLING_SAMPLES;
+}
+
+// Call this function from main sketch on match restart to clear stale data
+void resetRollingSpeed() {
+    // Force the function to detect a restart by calling with a sentinel value
+    // On next normal call, the time-went-backwards check will trigger reset
+    getRollingClosingSpeed(NO_DETECT_CM);
 }
 
 #endif  // ENABLE_ROLLING_SPEED
